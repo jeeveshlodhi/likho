@@ -18,38 +18,29 @@ const authQueryKeys = {
 
 // Sign Up Hook
 export const useSignUp = () => {
-  const { setUser, setTokens } = useAuthStore();
 
   return useMutation<SignUpResponse, AxiosError<ApiError>, SignUpRequest>({
     mutationFn: async (credentials: SignUpRequest) => {
       const response = await api.post<SignUpResponse>('/auth/signup', credentials);
       return response.data;
     },
-    onSuccess: (data: any) => {
-      setUser(data.user);
-      if (data.access_token) {
-        setTokens(data.access_token, data.refresh_token || null);
-        // Store tokens in localStorage
-        localStorage.setItem('access_token', data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem('refresh_token', data.refresh_token);
-        }
-      }
+    onSuccess: () => {
+      // Backend only returns the user object, not tokens on signup.
+      // So we just rely on redirects in the UI to login next.
     },
   });
 };
 
 // Sign In Hook
 export const useSignIn = () => {
-  const { setUser, setTokens } = useAuthStore();
+  const { setTokens } = useAuthStore();
 
   return useMutation<SignInResponse, AxiosError<ApiError>, SignInRequest>({
     mutationFn: async (credentials: SignInRequest) => {
-      const response = await api.post<SignInResponse>('/auth/signin', credentials);
+      const response = await api.post<SignInResponse>('/auth/login', credentials);
       return response.data;
     },
     onSuccess: (data) => {
-      setUser(data.user);
       setTokens(data.access_token, data.refresh_token || null);
       // Store tokens in localStorage
       localStorage.setItem('access_token', data.access_token);

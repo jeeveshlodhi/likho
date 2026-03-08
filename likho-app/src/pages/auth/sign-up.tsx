@@ -44,7 +44,7 @@ const SignUp = () => {
             onSuccess: () => {
                 setSuccessMessage('Account created successfully! Redirecting...');
                 setTimeout(() => {
-                    navigate('/dashboard');
+                    navigate('/auth/sign-in');
                 }, 1500);
             },
             onError: (error) => {
