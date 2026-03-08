@@ -17,9 +17,9 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             {label}
-            {props.required && <span className="text-red-500">*</span>}
+            {props.required && <span className="text-destructive">*</span>}
           </label>
         )}
         <div className="relative">
@@ -28,16 +28,16 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
             type={inputType}
             className={`
               w-full px-4 py-2.5 rounded-lg border
-              bg-white dark:bg-gray-800
-              text-gray-900 dark:text-white
-              placeholder-gray-400 dark:placeholder-gray-500
+              bg-background
+              text-foreground
+              placeholder:text-muted-foreground
               transition duration-200
               ${error
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-200 dark:focus:ring-red-900'
-                : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-900'
+                ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                : 'border-input focus:border-ring focus:ring-ring/20'
               }
               focus:outline-none focus:ring-2
-              disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50
+              disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-50
               ${icon ? 'pl-10' : ''}
               ${isPassword ? 'pr-10' : ''}
               ${className}
@@ -45,7 +45,7 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
             {...props}
           />
           {icon && (
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
               {icon}
             </div>
           )}
@@ -53,7 +53,7 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
@@ -64,9 +64,9 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
             </button>
           )}
         </div>
-        {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
+        {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
         {helpText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{helpText}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{helpText}</p>
         )}
       </div>
     );

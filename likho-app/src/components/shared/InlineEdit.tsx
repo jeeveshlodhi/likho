@@ -56,7 +56,7 @@ export default function InlineEdit({
         if (e.key === 'Enter') commit();
         if (e.key === 'Escape') onEditEnd();
       }}
-      className={`w-full rounded border border-blue-400 bg-white px-1 text-sm outline-none dark:bg-neutral-800 ${className}`}
+      className={`w-full rounded border border-input bg-background px-1 text-sm text-foreground outline-none ring-ring focus:ring-2 ${className}`}
     />
   );
 }

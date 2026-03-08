@@ -81,3 +81,38 @@ export function getRootNotes(notes: Note[], spaceType: SpaceType): Note[] {
     .filter((n) => n.spaceType === spaceType && !n.folderId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
+
+export function getFolderBreadcrumb(
+  folders: Folder[],
+  folderId: string
+): Folder[] {
+  const path: Folder[] = [];
+  let currentId: string | null = folderId;
+
+  while (currentId) {
+    const folder = folders.find((f) => f.id === currentId);
+    if (!folder) break;
+    path.unshift(folder);
+    currentId = folder.parentId;
+  }
+
+  return path;
+}
+
+export function getNotesInFolder(
+  notes: Note[],
+  folderId: string
+): Note[] {
+  return notes
+    .filter((n) => n.folderId === folderId)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function getChildFolders(
+  folders: Folder[],
+  parentId: string
+): Folder[] {
+  return folders
+    .filter((f) => f.parentId === parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}

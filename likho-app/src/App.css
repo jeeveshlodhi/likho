@@ -5,63 +5,89 @@
 @source "../node_modules/@blocknote/react";
 @source "../node_modules/@blocknote/shadcn";
 
+/* ─── Design tokens: use these in Tailwind as bg-background, text-foreground, etc. ─── */
 @theme {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-muted: var(--border-muted);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --radius: var(--radius);
 }
 
 @layer base {
-    :root {
-        --background: var(--color-neutral-50);
-        --foreground: var(--color-neutral-900);
-        --popover: var(--color-white);
-        --popover-foreground: var(--color-neutral-900);
-        --muted: var(--color-neutral-100);
-        --muted-foreground: var(--color-neutral-500);
-        --accent: var(--color-neutral-100);
-        --accent-foreground: var(--color-neutral-900);
-        --border: var(--color-neutral-200);
-        --input: var(--color-neutral-200);
-        --ring: var(--color-neutral-400);
-        --primary: var(--color-neutral-900);
-        --primary-foreground: var(--color-neutral-50);
-        --secondary: var(--color-neutral-100);
-        --secondary-foreground: var(--color-neutral-900);
-        --radius: 0.5rem;
+  :root {
+    --background: #fafafa;
+    --foreground: #171717;
+    --surface: #f5f5f5;
+    --surface-foreground: #171717;
+    --muted: #f0f0f0;
+    --muted-foreground: #737373;
+    --border: #e5e5e5;
+    --border-muted: #ebebeb;
+    --input: #e5e5e5;
+    --ring: #a3a3a3;
+    --primary: #171717;
+    --primary-foreground: #fafafa;
+    --secondary: #f0f0f0;
+    --secondary-foreground: #171717;
+    --accent: #f0f0f0;
+    --accent-foreground: #171717;
+    --destructive: #dc2626;
+    --destructive-foreground: #fafafa;
+    --popover: #ffffff;
+    --popover-foreground: #171717;
+    --sidebar: #f5f5f5;
+    --sidebar-foreground: #262626;
+    --sidebar-border: #e5e5e5;
+    --radius: 0.5rem;
 
-        --bn-colors-editor-background: transparent;
-    }
+    --bn-colors-editor-background: transparent;
+  }
 
-    .dark {
-        --background: var(--color-neutral-950);
-        --foreground: var(--color-neutral-50);
-        --popover: var(--color-neutral-900);
-        --popover-foreground: var(--color-neutral-50);
-        --muted: var(--color-neutral-800);
-        --muted-foreground: var(--color-neutral-400);
-        --accent: var(--color-neutral-800);
-        --accent-foreground: var(--color-neutral-50);
-        --border: var(--color-neutral-800);
-        --input: var(--color-neutral-800);
-        --ring: var(--color-neutral-600);
-        --primary: var(--color-neutral-50);
-        --primary-foreground: var(--color-neutral-900);
-        --secondary: var(--color-neutral-800);
-        --secondary-foreground: var(--color-neutral-50);
+  .dark {
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --surface: #141414;
+    --surface-foreground: #fafafa;
+    --muted: #262626;
+    --muted-foreground: #a3a3a3;
+    --border: #262626;
+    --border-muted: #1f1f1f;
+    --input: #262626;
+    --ring: #525252;
+    --primary: #fafafa;
+    --primary-foreground: #171717;
+    --secondary: #262626;
+    --secondary-foreground: #fafafa;
+    --accent: #262626;
+    --accent-foreground: #fafafa;
+    --destructive: #dc2626;
+    --destructive-foreground: #fafafa;
+    --popover: #171717;
+    --popover-foreground: #fafafa;
+    --sidebar: #0f0f0f;
+    --sidebar-foreground: #e5e5e5;
+    --sidebar-border: #262626;
 
-        --bn-colors-editor-background: transparent;
-    }
+    --bn-colors-editor-background: transparent;
+  }
 }

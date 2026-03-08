@@ -24,17 +24,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900';
+      'inline-flex items-center justify-center font-medium rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background';
 
     const variants = {
       primary:
-        'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500 disabled:bg-blue-400',
+        'bg-primary text-primary-foreground hover:opacity-90 focus:ring-ring disabled:opacity-50',
       secondary:
-        'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white focus:ring-gray-500 disabled:bg-gray-100 dark:disabled:bg-gray-800',
+        'bg-secondary text-secondary-foreground hover:opacity-90 focus:ring-ring disabled:opacity-50',
       outline:
-        'border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-gray-500',
+        'border-2 border-border bg-transparent text-foreground hover:bg-accent focus:ring-ring',
       danger:
-        'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 disabled:bg-red-400',
+        'bg-destructive text-destructive-foreground hover:opacity-90 focus:ring-ring disabled:opacity-50',
     };
 
     const sizes = {

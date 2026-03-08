@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Folder, Note, SpaceType } from '@/types/workspace';
+import type { Folder, Note, SpaceType, PageType } from '@/types/workspace';
 import { getDescendantFolderIds } from '@/utils/folderTree';
 
 interface WorkspaceState {
@@ -21,8 +21,10 @@ interface WorkspaceState {
   moveFolder: (id: string, newParentId: string | null) => void;
 
   // Note actions
-  createNote: (folderId: string | null, spaceType: SpaceType) => Note;
-  updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon' | 'coverImage'>>) => void;
+  createNote: (folderId: string | null, spaceType: SpaceType, pageType?: PageType) => Note;
+  createCanvas: (folderId: string | null, spaceType: SpaceType) => Note;
+  addNote: (note: Note) => void;
+  updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon' | 'coverImage' | 'pageType'>>) => void;
   deleteNote: (id: string) => void;
   moveNote: (noteId: string, targetFolderId: string | null) => void;
 
@@ -101,17 +103,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           ),
         })),
 
-      createNote: (folderId, spaceType) => {
+      createNote: (folderId, spaceType, pageType = 'note') => {
         const now = new Date().toISOString();
         const siblings = get().notes.filter(
           (n) => n.spaceType === spaceType && n.folderId === folderId
         );
         const note: Note = {
           id: nanoid(),
-          title: '',
+          title: pageType === 'canvas' ? 'Untitled canvas' : '',
           content: undefined,
           folderId,
           spaceType,
+          pageType,
           icon: null,
           coverImage: undefined,
           sortOrder: siblings.length,
@@ -124,6 +127,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }));
         return note;
       },
+
+      createCanvas: (folderId, spaceType) =>
+        get().createNote(folderId, spaceType, 'canvas'),
+
+      addNote: (note) =>
+        set((state) => ({
+          notes: state.notes.some((n) => n.id === note.id)
+            ? state.notes.map((n) => (n.id === note.id ? note : n))
+            : [...state.notes, note],
+        })),
 
       updateNote: (id, updates) =>
         set((state) => ({

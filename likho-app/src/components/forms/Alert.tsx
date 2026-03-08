@@ -14,9 +14,9 @@ const alertStyles = {
     icon: '✓',
   },
   error: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    border: 'border-red-200 dark:border-red-800',
-    text: 'text-red-800 dark:text-red-300',
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/30',
+    text: 'text-destructive',
     icon: '✕',
   },
   warning: {
@@ -26,9 +26,9 @@ const alertStyles = {
     icon: '⚠',
   },
   info: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800',
-    text: 'text-blue-800 dark:text-blue-300',
+    bg: 'bg-primary/10',
+    border: 'border-primary/30',
+    text: 'text-primary',
     icon: 'ℹ',
   },
 };

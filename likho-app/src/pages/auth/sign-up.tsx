@@ -5,6 +5,7 @@ import { useSignUp } from '@/hooks/useAuth';
 import { FormInput } from '@/components/forms/FormInput';
 import { Button } from '@/components/forms/Button';
 import { Alert } from '@/components/forms/Alert';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { SignUpRequest } from '@/types/auth';
 
 interface FormInputs extends SignUpRequest {
@@ -59,20 +60,23 @@ const SignUp = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+            <div className="absolute top-4 right-4">
+                <ThemeToggle showLabel={false} />
+            </div>
             <div className="w-full max-w-md">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h1 className="text-4xl font-bold text-foreground mb-2">
                         Join Likho
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-muted-foreground">
                         Create your AI-powered workspace
                     </p>
                 </div>
 
                 {/* Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+                <div className="bg-popover text-popover-foreground rounded-2xl shadow-xl border border-border p-8">
                     {/* Success Alert */}
                     {successMessage && (
                         <div className="mb-6">
@@ -193,11 +197,11 @@ const SignUp = () => {
 
                     {/* Divider */}
                     <div className="my-6 flex items-center gap-3">
-                        <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex-1 h-px bg-border"></div>
+                        <span className="text-sm text-muted-foreground">
                             Or sign up with
                         </span>
-                        <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                        <div className="flex-1 h-px bg-border"></div>
                     </div>
 
                     {/* OAuth Buttons */}
@@ -225,11 +229,11 @@ const SignUp = () => {
                     </div>
 
                     {/* Sign In Link */}
-                    <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-6 text-center text-sm text-muted-foreground">
                         Already have an account?{' '}
                         <Link
                             to="/auth/sign-in"
-                            className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="font-medium text-primary hover:opacity-90"
                         >
                             Sign in
                         </Link>
@@ -237,14 +241,14 @@ const SignUp = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                <div className="mt-8 text-center text-xs text-muted-foreground">
                     <p>
                         By creating an account, you agree to our{' '}
-                        <a href="#" className="hover:underline">
+                        <a href="#" className="text-muted-foreground hover:text-foreground underline">
                             Terms of Service
                         </a>{' '}
                         and{' '}
-                        <a href="#" className="hover:underline">
+                        <a href="#" className="text-muted-foreground hover:text-foreground underline">
                             Privacy Policy
                         </a>
                     </p>

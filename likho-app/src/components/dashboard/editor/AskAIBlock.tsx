@@ -19,12 +19,12 @@ export const AskAIBlock = createReactBlockSpec(
     {
         render: (props) => {
             return (
-                <div className="flex w-full flex-col gap-2 rounded-lg border border-purple-200 bg-purple-50/50 p-4 dark:border-purple-900/50 dark:bg-purple-900/10 mb-2 mt-2">
-                    <div className="flex items-center gap-2 font-medium text-purple-700 dark:text-purple-400">
+                <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-muted p-4 mb-2 mt-2">
+                    <div className="flex items-center gap-2 font-medium text-foreground">
                         <Sparkles className="h-4 w-4" />
                         <span>AI Response</span>
                     </div>
-                    <div className="text-sm text-neutral-700 dark:text-neutral-300">
+                    <div className="text-sm text-muted-foreground">
                         {props.block.props.response || "I am thinking..."}
                     </div>
                 </div>

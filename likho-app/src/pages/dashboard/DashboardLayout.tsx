@@ -36,10 +36,10 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="flex h-screen bg-white dark:bg-neutral-900">
+    <div className="flex h-full min-h-0 bg-background">
       {/* Sidebar */}
       <div
-        className="relative flex-shrink-0"
+        className="relative flex h-full min-h-0 flex-shrink-0 flex-col"
         style={{ width: sidebarCollapsed ? 48 : sidebarWidth }}
       >
         <Sidebar />
@@ -47,7 +47,7 @@ export default function DashboardLayout() {
         {!sidebarCollapsed && (
           <div
             onMouseDown={handleMouseDown}
-            className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize hover:bg-blue-400/50"
+            className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/20"
           />
         )}
       </div>

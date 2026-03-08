@@ -17,7 +17,7 @@ export function ThemeToggle({ className = "", showLabel = true }: { className?: 
     return (
         <button
             onClick={toggleTheme}
-            className={`flex items-center gap-2 rounded-md p-1.5 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-700 dark:hover:text-neutral-50 ${className}`}
+            className={`flex items-center gap-2 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground ${className}`}
             title="Toggle theme"
         >
             {theme === "light" ? (
@@ -29,7 +29,7 @@ export function ThemeToggle({ className = "", showLabel = true }: { className?: 
                     <span className="absolute left-0 top-0 h-1/2 w-[18px] overflow-hidden">
                         <Sun size={18} />
                     </span>
-                    <span className="absolute bottom-0 left-0 h-1/2 w-[18px] overflow-hidden text-neutral-900 dark:text-neutral-50">
+                    <span className="absolute bottom-0 left-0 h-1/2 w-[18px] overflow-hidden text-foreground">
                         <Moon size={18} className="-translate-y-1/2" />
                     </span>
                 </div>

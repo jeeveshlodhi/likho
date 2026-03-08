@@ -76,38 +76,38 @@ export default function NoteExportActions({ editor, note }: NoteExportActionsPro
         <div className="relative inline-block text-left" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                className="flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
                 <Download className="h-4 w-4" />
                 <span>Export</span>
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-neutral-900 dark:ring-white/10">
+                <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-popover py-1 shadow-lg ring-1 ring-ring focus:outline-none">
                     <button
                         onClick={handleExportMarkdown}
-                        className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        className="flex w-full items-center px-4 py-2 text-sm text-popover-foreground hover:bg-accent"
                     >
                         <FileText className="mr-3 h-4 w-4" />
                         Markdown (.md)
                     </button>
                     <button
                         onClick={handleExportHTML}
-                        className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        className="flex w-full items-center px-4 py-2 text-sm text-popover-foreground hover:bg-accent"
                     >
                         <Code2 className="mr-3 h-4 w-4" />
                         HTML (.html)
                     </button>
                     <button
                         onClick={handleExportJSON}
-                        className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        className="flex w-full items-center px-4 py-2 text-sm text-popover-foreground hover:bg-accent"
                     >
                         <FileJson className="mr-3 h-4 w-4" />
                         JSON (.json)
                     </button>
                     <button
                         onClick={handleExportPDF}
-                        className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        className="flex w-full items-center px-4 py-2 text-sm text-popover-foreground hover:bg-accent"
                     >
                         <File className="mr-3 h-4 w-4" />
                         PDF (.pdf)

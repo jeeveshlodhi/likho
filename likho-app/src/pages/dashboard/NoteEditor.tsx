@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/shadcn';
@@ -11,7 +11,7 @@ import {
   SuggestionMenuController,
 } from "@blocknote/react";
 import '@blocknote/shadcn/style.css';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Share2 } from 'lucide-react';
 import { AskAIBlock } from '@/components/dashboard/editor/AskAIBlock';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -19,8 +19,16 @@ import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import NoteHeader from '@/components/dashboard/NoteHeader';
 import NoteExportActions from '@/components/dashboard/NoteExportActions';
-
+import CollaboratorAvatars from '@/components/dashboard/CollaboratorAvatars';
+import ShareModal from '@/components/dashboard/ShareModal';
+import { useAuthStore } from '@/store/authStore';
+import { createCollaborationProvider, destroyCollaborationProvider } from '@/lib/collaboration';
 import { useTheme } from '@/providers/ThemeProvider';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isUuid(s: string) {
+  return UUID_REGEX.test(s);
+}
 
 // 1. Setup custom schema
 const schema = BlockNoteSchema.create({
@@ -60,14 +68,49 @@ export default function NoteEditor() {
   const navigate = useNavigate();
   const { notes, setActiveNote } = useWorkspaceStore();
   const { theme } = useTheme();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
+  const userName = user?.full_name || user?.email || 'Anonymous';
+  const prevCollabRef = useRef<ReturnType<typeof createCollaborationProvider> | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const note = useMemo(() => notes.find((n) => n.id === noteId), [notes, noteId]);
+
+  const collabSession = useMemo(() => {
+    if (prevCollabRef.current) {
+      destroyCollaborationProvider(prevCollabRef.current);
+      prevCollabRef.current = null;
+    }
+    const isOnline = note?.spaceType === 'online';
+    const canCollab = isOnline && noteId && accessToken && isUuid(noteId);
+    if (!canCollab) return null;
+    const session = createCollaborationProvider(noteId!, accessToken, userName);
+    prevCollabRef.current = session;
+    return session;
+  }, [note?.spaceType, noteId, accessToken, userName]);
+
+  useEffect(() => {
+    return () => {
+      if (prevCollabRef.current) {
+        destroyCollaborationProvider(prevCollabRef.current);
+        prevCollabRef.current = null;
+      }
+    };
+  }, []);
 
   const save = useAutoSave(noteId || '');
 
   const editor = useCreateBlockNote({
     schema,
-    initialContent: note?.content || undefined,
+    initialContent: collabSession ? undefined : (note?.content || undefined),
+    collaboration: collabSession
+      ? {
+          provider: collabSession.provider,
+          fragment: collabSession.doc.getXmlFragment('document-store'),
+          user: collabSession.user,
+          showCursorLabels: 'activity' as const,
+        }
+      : undefined,
   });
 
   useEffect(() => {
@@ -91,10 +134,34 @@ export default function NoteEditor() {
   return (
     <div className="flex h-full flex-col">
       {/* Breadcrumb and Actions */}
-      <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-2 dark:border-neutral-800">
-        <Breadcrumb note={note} />
+      <div className="flex items-center justify-between border-b border-border px-6 py-2">
+        <div className="flex items-center gap-3">
+          <Breadcrumb note={note} />
+          {collabSession && (
+            <CollaboratorAvatars provider={collabSession.provider} />
+          )}
+          {note.spaceType === 'online' && isUuid(note.id) && (
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+              title="Share"
+            >
+              <Share2 size={16} />
+              Share
+            </button>
+          )}
+        </div>
         {editor && <NoteExportActions editor={editor} note={note} />}
       </div>
+      {note.spaceType === 'online' && (
+        <ShareModal
+          pageId={note.id}
+          pageTitle={note.title || 'Untitled'}
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {/* Editor area */}
       <div className="flex-1 overflow-y-auto">
@@ -113,7 +180,7 @@ export default function NoteEditor() {
               editor={editor}
               slashMenu={false}
               onChange={() => {
-                save({ content: editor.document });
+                if (!collabSession) save({ content: editor.document });
               }}
               theme={resolvedTheme}
             >

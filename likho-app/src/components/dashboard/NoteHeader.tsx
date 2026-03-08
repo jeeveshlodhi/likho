@@ -62,14 +62,14 @@ export default function NoteHeader({ note }: NoteHeaderProps) {
                         <div className="absolute top-4 right-4 flex space-x-2">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center space-x-2 rounded-md bg-white/80 px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm backdrop-blur transition-colors hover:bg-white dark:bg-neutral-900/80 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                                className="flex items-center space-x-2 rounded-md bg-popover/90 px-3 py-1.5 text-sm font-medium text-popover-foreground shadow-sm backdrop-blur transition-colors hover:bg-popover"
                             >
                                 <Image className="h-4 w-4" />
                                 <span>Change cover</span>
                             </button>
                             <button
                                 onClick={removeCoverImage}
-                                className="flex items-center space-x-2 rounded-md bg-white/80 px-3 py-1.5 text-sm font-medium text-red-600 shadow-sm backdrop-blur transition-colors hover:bg-white dark:bg-neutral-900/80 dark:text-red-400 dark:hover:bg-neutral-900"
+                                className="flex items-center space-x-2 rounded-md bg-popover/90 px-3 py-1.5 text-sm font-medium text-destructive shadow-sm backdrop-blur transition-colors hover:bg-popover"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </button>
@@ -95,13 +95,13 @@ export default function NoteHeader({ note }: NoteHeaderProps) {
                     <div className="group/icon relative inline-block">
                         <button
                             onClick={handleIconSelect}
-                            className={`flex h-[72px] w-[72px] items-center justify-center rounded-xl text-5xl shadow-sm transition-transform hover:scale-105 backdrop-blur ${note.coverImage ? 'bg-white dark:bg-neutral-900 shadow-md' : 'bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 shadow-none'}`}
+                            className={`flex h-[72px] w-[72px] items-center justify-center rounded-xl text-5xl shadow-sm transition-transform hover:scale-105 backdrop-blur ${note.coverImage ? 'bg-popover shadow-md' : 'bg-transparent hover:bg-muted shadow-none'}`}
                         >
                             {note.icon}
                         </button>
                         <button
                             onClick={removeIcon}
-                            className="absolute -right-2 -top-2 hidden rounded-full bg-neutral-100 p-1 text-neutral-500 shadow-sm transition-colors hover:bg-neutral-200 hover:text-red-500 group-hover/icon:block dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                            className="absolute -right-2 -top-2 hidden rounded-full bg-muted p-1 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-destructive group-hover/icon:block"
                         >
                             <Trash2 className="h-3 w-3" />
                         </button>
@@ -116,7 +116,7 @@ export default function NoteHeader({ note }: NoteHeaderProps) {
                         {!note.icon && (
                             <button
                                 onClick={handleIconSelect}
-                                className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                                className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                                 <Smile className="h-4 w-4" />
                                 <span>Add icon</span>
@@ -126,7 +126,7 @@ export default function NoteHeader({ note }: NoteHeaderProps) {
                         {!note.coverImage && (
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                                className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                                 <Image className="h-4 w-4" />
                                 <span>Add cover</span>

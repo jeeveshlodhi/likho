@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import get_current_active_user
 from app.core.security import create_access_token, verify_password
 from app.modules.auth.schemas import AuthUser, LoginRequest, RegisterRequest, TokenResponse
+from app.modules.users.models import User
 from app.modules.users import crud
 
 router = APIRouter()
@@ -38,6 +40,6 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=AuthUser)
-def me(db: Session = Depends(get_db), token: str = ""):
-    """Placeholder – wire up with OAuth2PasswordBearer when adding protected routes."""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Use /api/v1/auth/login to get a token.")
+def me(current_user: User = Depends(get_current_active_user)):
+    """Return the currently authenticated user."""
+    return current_user

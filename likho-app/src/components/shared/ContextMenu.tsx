@@ -38,7 +38,7 @@ export default function ContextMenu({ items, position, onClose }: ContextMenuPro
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="fixed z-50 min-w-[160px] rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+          className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-popover py-1 shadow-lg"
           style={{ top: position.y, left: position.x }}
         >
           {items.map((item, i) => (
@@ -50,8 +50,8 @@ export default function ContextMenu({ items, position, onClose }: ContextMenuPro
               }}
               className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
                 item.variant === 'danger'
-                  ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20'
-                  : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                  ? 'text-destructive hover:bg-destructive/10'
+                  : 'text-popover-foreground hover:bg-accent'
               }`}
             >
               {item.icon && <span className="h-4 w-4">{item.icon}</span>}

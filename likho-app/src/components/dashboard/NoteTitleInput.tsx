@@ -25,7 +25,7 @@ export default function NoteTitleInput({ note }: NoteTitleInputProps) {
                 save({ title: newValue });
             }}
             placeholder="Untitled"
-            className="mb-4 w-full bg-transparent text-4xl font-bold text-neutral-900 outline-none placeholder:text-neutral-300 dark:text-neutral-100 dark:placeholder:text-neutral-600"
+            className="mb-4 w-full bg-transparent text-4xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
         />
     );
 }

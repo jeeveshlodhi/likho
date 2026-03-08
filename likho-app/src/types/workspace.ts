@@ -1,5 +1,8 @@
 export type SpaceType = 'online' | 'offline';
 
+/** Page type: note = BlockNote doc, canvas = tldraw whiteboard */
+export type PageType = 'note' | 'canvas';
+
 export interface Folder {
   id: string;
   name: string;
@@ -15,9 +18,10 @@ export interface Folder {
 export interface Note {
   id: string;
   title: string;
-  content: any; // BlockNote PartialBlock[]
+  content: any; // BlockNote doc (note) or { document?, session? } (canvas)
   folderId: string | null;
   spaceType: SpaceType;
+  pageType?: PageType; // default 'note'
   icon: string | null;
   coverImage?: string;
   sortOrder: number;
