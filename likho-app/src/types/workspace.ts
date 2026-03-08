@@ -1,6 +1,6 @@
 export type SpaceType = 'online' | 'offline';
 
-/** Page type: note = BlockNote doc, canvas = tldraw whiteboard */
+/** Page type: note = BlockNote doc, canvas = Excalidraw whiteboard */
 export type PageType = 'note' | 'canvas';
 
 export interface Folder {

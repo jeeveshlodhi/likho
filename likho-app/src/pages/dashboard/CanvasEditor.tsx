@@ -1,15 +1,21 @@
-import { useRef, useEffect, useState, type ComponentProps } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Tldraw, getSnapshot, type TLEditorSnapshot } from 'tldraw';
-import 'tldraw/tldraw.css';
+import { Excalidraw } from '@excalidraw/excalidraw';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
+import { useTheme } from '@/providers/ThemeProvider';
 
-function throttle<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
+/** Persisted canvas content: elements + appState from Excalidraw (JSON-serializable). */
+export interface ExcalidrawScene {
+  elements?: unknown[];
+  appState?: unknown;
+}
+
+function throttle(fn: (...args: unknown[]) => void, delay: number): (...args: unknown[]) => void {
   let last = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  return ((...args: Parameters<T>) => {
+  return (...args: unknown[]) => {
     const now = Date.now();
     if (timer) clearTimeout(timer);
     if (now - last >= delay) {
@@ -22,7 +28,7 @@ function throttle<T extends (...args: unknown[]) => void>(fn: T, delay: number):
         fn(...args);
       }, delay - (now - last));
     }
-  }) as T;
+  };
 }
 
 export default function CanvasEditor() {
@@ -31,7 +37,7 @@ export default function CanvasEditor() {
   const notes = useWorkspaceStore((s) => s.notes);
   const setActiveNote = useWorkspaceStore((s) => s.setActiveNote);
   const updateNote = useWorkspaceStore((s) => s.updateNote);
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const { theme } = useTheme();
   const noteIdRef = useRef(noteId ?? null);
   const updateNoteRef = useRef(updateNote);
   noteIdRef.current = noteId ?? null;
@@ -39,8 +45,8 @@ export default function CanvasEditor() {
 
   const note = notes.find((n) => n.id === noteId);
 
-  // Snapshot only when opening this note — never update from store after our own saves (would reload canvas).
-  const [snapshotForEditor, setSnapshotForEditor] = useState<TLEditorSnapshot | undefined>(undefined);
+  // Initial scene only when opening this note — never from our own saves (would reload canvas).
+  const [initialData, setInitialData] = useState<ExcalidrawScene | null>(null);
   const lastNoteIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -48,10 +54,18 @@ export default function CanvasEditor() {
     if (lastNoteIdRef.current === noteId) return;
     lastNoteIdRef.current = noteId;
     const raw = note.content;
-    if (!raw || typeof raw !== 'object' || (!('document' in raw) && !('session' in raw))) {
-      setSnapshotForEditor(undefined);
+    if (!raw || typeof raw !== 'object') {
+      setInitialData(null);
+      return;
+    }
+    const content = raw as ExcalidrawScene;
+    if (content.elements || content.appState) {
+      setInitialData({
+        elements: content.elements ?? [],
+        appState: content.appState ?? undefined,
+      });
     } else {
-      setSnapshotForEditor(raw as TLEditorSnapshot);
+      setInitialData(null);
     }
   }, [noteId, note]);
 
@@ -65,24 +79,36 @@ export default function CanvasEditor() {
     }
   }, [note, noteId, navigate]);
 
-  useEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-      cleanupRef.current = null;
-    };
-  }, []);
-
-  const handleMount = useRef((editor: Parameters<NonNullable<ComponentProps<typeof Tldraw>['onMount']>>[0]) => {
-    cleanupRef.current?.();
-    const save = throttle(() => {
+  const saveScene = useRef(
+    throttle((...args: unknown[]) => {
+      const [elements, appState] = args;
       const id = noteIdRef.current;
       const update = updateNoteRef.current;
       if (!id || !update) return;
-      const { document: doc, session } = getSnapshot(editor.store);
-      update(id, { content: { document: doc, session } });
-    }, 600);
-    cleanupRef.current = editor.store.listen(save, { source: 'user', scope: 'document' });
-  }).current;
+      update(id, {
+        content: {
+          elements: Array.isArray(elements) ? [...elements] : [],
+          appState: appState && typeof appState === 'object' ? { ...(appState as object) } : {},
+        },
+      });
+    }, 600)
+  ).current;
+
+  const handleChange = useCallback(
+    (elements: unknown, appState: unknown) => {
+      saveScene(
+        Array.isArray(elements) ? elements : [],
+        appState && typeof appState === 'object' ? appState : {}
+      );
+    },
+    [saveScene]
+  );
+
+  const resolvedTheme =
+    theme === 'dark' ||
+    (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark'
+      : 'light';
 
   if (!note) return null;
 
@@ -93,10 +119,10 @@ export default function CanvasEditor() {
         <NoteTitleInput note={note} />
       </div>
       <div className="relative flex-1 min-h-0">
-        <Tldraw
-          snapshot={snapshotForEditor}
-          onMount={handleMount}
-          className="absolute inset-0"
+        <Excalidraw
+          initialData={initialData as React.ComponentProps<typeof Excalidraw>['initialData']}
+          onChange={handleChange}
+          theme={resolvedTheme}
         />
       </div>
     </div>
