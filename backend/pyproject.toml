@@ -1,15 +1,18 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Likho Backend - AI-powered Workspace"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "alembic",
     "fastapi",
-    "pydantic",
+    "pydantic[email]",
     "pydantic-settings",
     "psycopg2-binary",
     "sqlalchemy",
     "uvicorn",
+    "pyjwt>=2.11.0",
+    "passlib>=1.7.4",
+    "bcrypt>=5.0.0",
 ]

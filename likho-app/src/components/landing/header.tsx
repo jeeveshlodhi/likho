@@ -7,8 +7,8 @@ const Header = () => {
                 <h1 className="text-2xl font-bold">Likho</h1>
             </div>
             <div className="flex gap-4">
-                <Link to="/sign-in" className="btn btn-primary">Sign In</Link>
-                <Link to="/sign-up" className="btn btn-primary">Sign Up</Link>
+                <Link to="/auth/sign-in" className="btn btn-primary">Sign In</Link>
+                <Link to="/auth/sign-up" className="btn btn-primary">Sign Up</Link>
             </div>
         </header>
     );
