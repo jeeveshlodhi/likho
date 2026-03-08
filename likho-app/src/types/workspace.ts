@@ -19,6 +19,7 @@ export interface Note {
   folderId: string | null;
   spaceType: SpaceType;
   icon: string | null;
+  coverImage?: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

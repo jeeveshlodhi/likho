@@ -22,7 +22,7 @@ interface WorkspaceState {
 
   // Note actions
   createNote: (folderId: string | null, spaceType: SpaceType) => Note;
-  updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon'>>) => void;
+  updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon' | 'coverImage'>>) => void;
   deleteNote: (id: string) => void;
   moveNote: (noteId: string, targetFolderId: string | null) => void;
 
@@ -113,6 +113,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           folderId,
           spaceType,
           icon: null,
+          coverImage: undefined,
           sortOrder: siblings.length,
           createdAt: now,
           updatedAt: now,

@@ -33,7 +33,7 @@ export const useSignUp = () => {
 
 // Sign In Hook
 export const useSignIn = () => {
-  const { setTokens } = useAuthStore();
+  const { setTokens, setUser } = useAuthStore();
 
   return useMutation<SignInResponse, AxiosError<ApiError>, SignInRequest>({
     mutationFn: async (credentials: SignInRequest) => {
@@ -42,6 +42,7 @@ export const useSignIn = () => {
     },
     onSuccess: (data) => {
       setTokens(data.access_token, data.refresh_token || null);
+      setUser(data.user);
       // Store tokens in localStorage
       localStorage.setItem('access_token', data.access_token);
       if (data.refresh_token) {

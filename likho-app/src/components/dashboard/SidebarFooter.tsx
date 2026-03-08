@@ -1,6 +1,7 @@
 import { LogOut, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 interface SidebarFooterProps {
   collapsed: boolean;
@@ -17,7 +18,8 @@ export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
 
   if (collapsed) {
     return (
-      <div className="border-t border-neutral-200 p-2 dark:border-neutral-700">
+      <div className="border-t border-neutral-200 p-2 dark:border-neutral-700 flex flex-col gap-2">
+        <ThemeToggle showLabel={false} className="w-full justify-center" />
         <button
           onClick={handleLogout}
           className="flex w-full items-center justify-center rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700"
@@ -44,6 +46,7 @@ export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <ThemeToggle showLabel={false} className="p-1" />
           <button
             title="Settings"
             className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"

@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@source "../node_modules/@blocknote/react";
+@source "../node_modules/@blocknote/shadcn";
+
+@theme {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+}
+
+@layer base {
+    :root {
+        --background: var(--color-neutral-50);
+        --foreground: var(--color-neutral-900);
+        --popover: var(--color-white);
+        --popover-foreground: var(--color-neutral-900);
+        --muted: var(--color-neutral-100);
+        --muted-foreground: var(--color-neutral-500);
+        --accent: var(--color-neutral-100);
+        --accent-foreground: var(--color-neutral-900);
+        --border: var(--color-neutral-200);
+        --input: var(--color-neutral-200);
+        --ring: var(--color-neutral-400);
+        --primary: var(--color-neutral-900);
+        --primary-foreground: var(--color-neutral-50);
+        --secondary: var(--color-neutral-100);
+        --secondary-foreground: var(--color-neutral-900);
+        --radius: 0.5rem;
+
+        --bn-colors-editor-background: transparent;
+    }
+
+    .dark {
+        --background: var(--color-neutral-950);
+        --foreground: var(--color-neutral-50);
+        --popover: var(--color-neutral-900);
+        --popover-foreground: var(--color-neutral-50);
+        --muted: var(--color-neutral-800);
+        --muted-foreground: var(--color-neutral-400);
+        --accent: var(--color-neutral-800);
+        --accent-foreground: var(--color-neutral-50);
+        --border: var(--color-neutral-800);
+        --input: var(--color-neutral-800);
+        --ring: var(--color-neutral-600);
+        --primary: var(--color-neutral-50);
+        --primary-foreground: var(--color-neutral-900);
+        --secondary: var(--color-neutral-800);
+        --secondary-foreground: var(--color-neutral-50);
+
+        --bn-colors-editor-background: transparent;
+    }
+}
