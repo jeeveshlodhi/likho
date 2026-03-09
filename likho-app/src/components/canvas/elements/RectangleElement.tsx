@@ -21,8 +21,9 @@ export const RectangleRender: React.FC<{ element: RectangleElement, isSelected?:
                     style={{
                         position: 'absolute',
                         inset: -4,
-                        border: '1px solid blue',
+                        border: '1px solid #3b82f6',
                         pointerEvents: 'none',
+                        borderRadius: (element.borderRadius || 0) + 4,
                     }}
                 />
             )}

@@ -201,6 +201,9 @@ CREATE TABLE pages (
   cover_url         TEXT,
   cover_position    FLOAT DEFAULT 0.5,         -- vertical position 0-1
 
+  content           JSONB,                     -- BlockNote document JSON
+  page_type         VARCHAR(50) DEFAULT 'note', -- 'note', 'canvas', 'kanban'
+
   is_template       BOOLEAN DEFAULT FALSE,
   template_id       UUID REFERENCES pages(id), -- if created from template
   is_locked         BOOLEAN DEFAULT FALSE,

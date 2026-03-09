@@ -8,6 +8,7 @@ import DashboardLayout from "@/pages/dashboard/DashboardLayout";
 import DashboardHome from "@/pages/dashboard/DashboardHome";
 import FolderIndex from "@/pages/dashboard/FolderIndex";
 import PageEditor from "@/pages/dashboard/PageEditor";
+import SettingsPage from "@/pages/settings";
 import SharedPageView from "@/pages/SharedPageView";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
@@ -39,6 +40,8 @@ function App() {
         <Route index element={<DashboardHome />} />
         <Route path="folder/:folderId" element={<FolderIndex />} />
         <Route path="note/:noteId" element={<PageEditor />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/:section" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

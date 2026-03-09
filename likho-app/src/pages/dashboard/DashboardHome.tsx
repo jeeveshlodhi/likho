@@ -6,6 +6,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useWorkspace, useSpaces, useCreatePage } from '@/hooks/useWorkspace';
 import type { PageType, SpaceType } from '@/types/workspace';
 import NewPageModal from '@/components/dashboard/NewPageModal';
+import {
+  getTemplateById,
+  getTemplateContent,
+} from '@/lib/templateRegistry';
 
 export default function DashboardHome() {
   const navigate = useNavigate();
@@ -14,33 +18,32 @@ export default function DashboardHome() {
   const { data: workspace } = useWorkspace();
   const { data: spaces } = useSpaces(workspace?.id);
   const createPageMutation = useCreatePage();
+
   const [newPageModalOpen, setNewPageModalOpen] = useState(false);
 
   const handleNewPageSelect = async (spaceType: SpaceType, templateId: PageType) => {
-    // For online space, create on backend (all page types)
+    const template = getTemplateById(templateId);
+    const templateContent = getTemplateContent(templateId);
+    const defaultTitle = template?.defaultTitle || 'Untitled';
+
+    // For online space, create on backend first (all page types)
     if (spaceType === 'online' && workspace?.id && spaces?.length && createPageMutation.mutateAsync) {
       const onlineSpace = spaces.find((s) => s.type === 'online');
       if (onlineSpace) {
         try {
-          const defaultContent = templateId === 'kanban'
-            ? { columns: [], columnData: {}, cardData: {} }
-            : templateId === 'canvas'
-              ? { elements: [], camera: { x: 0, y: 0, zoom: 1 } }
-              : undefined;
-
           const page = await createPageMutation.mutateAsync({
             space_id: onlineSpace.id,
-            title: templateId === 'canvas' ? 'Untitled canvas' : '',
+            title: defaultTitle,
             page_type: templateId,
-            content: defaultContent,
+            content: templateContent.data,
           });
           const note = {
             id: page.id,
-            title: page.title || '',
-            content: page.content ?? defaultContent,
+            title: page.title || defaultTitle,
+            content: page.content ?? templateContent.data,
             folderId: page.parent_id,
             spaceType: 'online' as const,
-            pageType: templateId,
+            pageType: (page.page_type as PageType) || templateId,
             icon: page.icon ?? null,
             coverImage: page.cover_url ?? undefined,
             sortOrder: page.sort_order ?? 0,
@@ -57,23 +60,23 @@ export default function DashboardHome() {
       }
     }
 
-    // Offline / fallback: create locally
-    if (templateId === 'canvas') {
+    // Offline / fallback: create locally using template registry
+    const content = getTemplateContent(templateId);
+
+    // Handle different content types
+    if (content.type === 'canvas') {
       const note = createCanvas(null, spaceType);
+      // Update with proper canvas content if needed
+      if (content.data.elements?.length > 0) {
+        note.content = content.data;
+      }
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
       return;
     }
 
-    if (templateId === 'kanban') {
-      const note = createNote(null, spaceType, 'kanban');
-      note.content = { columns: [], columnData: {}, cardData: {} };
-      setActiveNote(note.id);
-      navigate(`/dashboard/note/${note.id}`);
-      return;
-    }
-
-    const note = createNote(null, spaceType);
+    // For all other types (note, kanban, meeting, etc.)
+    const note = createNote(null, spaceType, templateId, content.data);
     setActiveNote(note.id);
     navigate(`/dashboard/note/${note.id}`);
   };
@@ -81,32 +84,31 @@ export default function DashboardHome() {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted"
+        >
           <FileText size={32} className="text-muted-foreground" />
         </div>
-        <h2 className="mb-2 text-xl font-semibold text-foreground">
-          Welcome to Likho
-        </h2>
-        <p className="mb-6 text-sm text-muted-foreground">
+        <h2 className="mb-2 text-2xl font-bold">Welcome to your workspace</h2>
+        <p className="mb-6 text-muted-foreground">
           {isGuest
-            ? 'You are in guest mode. Create offline pages to get started, or sign in for online sync.'
-            : 'Select a page from the sidebar or create a new one to get started.'}
+            ? 'Start creating notes. Sign in to sync across devices.'
+            : 'Create your first page to get started.'}
         </p>
         <button
           onClick={() => setNewPageModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90"
         >
-          <Plus size={16} />
-          New page
+          <Plus size={18} />
+          Create your first page
         </button>
-      </div>
 
-      <NewPageModal
-        open={newPageModalOpen}
-        onClose={() => setNewPageModalOpen(false)}
-        context={{ folderId: null }}
-        onSelect={handleNewPageSelect}
-      />
+        <NewPageModal
+          open={newPageModalOpen}
+          onClose={() => setNewPageModalOpen(false)}
+          context={{ folderId: null }}
+          onSelect={handleNewPageSelect}
+        />
+      </div>
     </div>
   );
 }

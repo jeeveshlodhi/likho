@@ -33,14 +33,14 @@ export const FreehandRender: React.FC<{ element: FreehandElement, isSelected?: b
             />
             {isSelected && (
                 <rect
-                    x={-2}
-                    y={-2}
-                    width={(element.width || 1) + 4}
-                    height={(element.height || 1) + 4}
+                    x={-4}
+                    y={-4}
+                    width={(element.width || 1) + 8}
+                    height={(element.height || 1) + 8}
                     fill="none"
-                    stroke="blue"
+                    stroke="#3b82f6"
                     strokeWidth={1}
-                    strokeDasharray="4"
+                    rx={4}
                 />
             )}
         </svg>

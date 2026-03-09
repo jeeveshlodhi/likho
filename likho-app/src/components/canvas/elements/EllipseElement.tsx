@@ -27,14 +27,15 @@ export const EllipseRender: React.FC<{ element: EllipseElement; isSelected?: boo
             />
             {isSelected && (
                 <rect
-                    x={-2}
-                    y={-2}
-                    width={w + 4}
-                    height={h + 4}
+                    x={-4}
+                    y={-4}
+                    width={w + 8}
+                    height={h + 8}
                     fill="none"
                     stroke="#3b82f6"
                     strokeWidth={1}
-                    strokeDasharray="4"
+                    rx={(w + 8) / 2}
+                    ry={(h + 8) / 2}
                 />
             )}
         </svg>

@@ -1,15 +1,34 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { FileText, Layout, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { FileText, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { Note } from '@/types/workspace';
 import ContextMenu, { type ContextMenuItem } from '@/components/shared/ContextMenu';
 import InlineEdit from '@/components/shared/InlineEdit';
+import { getTemplateById } from '@/lib/templateRegistry';
 
 export const SIDEBAR_NOTE_DRAG_TYPE = 'application/x-likho-sidebar-note';
 
 interface NoteItemProps {
   note: Note;
+}
+
+// Get the appropriate icon for a note based on its pageType
+function getNoteIcon(note: Note) {
+  // If note has a custom icon set, use that
+  if (note.icon) {
+    return note.icon;
+  }
+
+  // Otherwise, get icon from template
+  const template = note.pageType ? getTemplateById(note.pageType) : null;
+  if (template) {
+    const Icon = template.icon;
+    return <Icon size={14} className="text-muted-foreground" />;
+  }
+
+  // Default fallback
+  return <FileText size={14} className="text-muted-foreground" />;
 }
 
 export default function NoteItem({ note }: NoteItemProps) {
@@ -76,7 +95,7 @@ export default function NoteItem({ note }: NoteItemProps) {
         }`}
       >
         <span className="flex-shrink-0">
-          {note.icon || (note.pageType === 'canvas' ? <Layout size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />)}
+          {getNoteIcon(note)}
         </span>
         <InlineEdit
           value={note.title || 'Untitled'}

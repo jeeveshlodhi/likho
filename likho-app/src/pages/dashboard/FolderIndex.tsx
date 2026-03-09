@@ -4,13 +4,12 @@ import {
   ChevronRight,
   Folder,
   FileText,
-  Layout,
   Cloud,
   HardDrive,
   Plus,
   Search,
 } from 'lucide-react';
-import type { PageType, SpaceType } from '@/types/workspace';
+import type { PageType, SpaceType, Note } from '@/types/workspace';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import {
   getFolderBreadcrumb,
@@ -18,6 +17,10 @@ import {
   getChildFolders,
 } from '@/utils/folderTree';
 import NewPageModal from '@/components/dashboard/NewPageModal';
+import {
+  getTemplateContent,
+  getTemplateById,
+} from '@/lib/templateRegistry';
 
 export default function FolderIndex() {
   const { folderId } = useParams<{ folderId: string }>();
@@ -75,10 +78,22 @@ export default function FolderIndex() {
     (_spaceType: SpaceType, templateId: PageType) => {
       if (!folder) return;
       setActiveFolder(null);
-      const note =
-        templateId === 'canvas'
-          ? createCanvas(folder.id, folder.spaceType)
-          : createNote(folder.id, folder.spaceType);
+
+      const content = getTemplateContent(templateId);
+
+      // Handle different content types
+      let note;
+      if (content.type === 'canvas') {
+        note = createCanvas(folder.id, folder.spaceType);
+        // Update with proper canvas content if needed
+        if (content.data.elements?.length > 0) {
+          note.content = content.data;
+        }
+      } else {
+        // For all other types (note, kanban, meeting, etc.)
+        note = createNote(folder.id, folder.spaceType, templateId, content.data);
+      }
+
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
     },
@@ -92,6 +107,17 @@ export default function FolderIndex() {
     },
     [setActiveFolder, navigate]
   );
+
+  // Helper to get icon for a note
+  const getNoteIcon = useCallback((note: Note) => {
+    if (note.icon) return note.icon;
+    const template = note.pageType ? getTemplateById(note.pageType) : null;
+    if (template) {
+      const Icon = template.icon;
+      return <Icon size={16} className="text-muted-foreground" />;
+    }
+    return <FileText size={16} className="text-muted-foreground" />;
+  }, []);
 
   if (!folderId || !folder) {
     return (
@@ -239,7 +265,7 @@ export default function FolderIndex() {
             </div>
           ) : filteredNotes.length === 0 ? (
             <p className="py-4 text-sm text-muted-foreground">
-              No notes match “{search}”.
+              No notes match "{search}".
             </p>
           ) : (
             <ul className="space-y-0">
@@ -254,7 +280,7 @@ export default function FolderIndex() {
                       {i + 1}
                     </span>
                     <span className="flex-shrink-0 text-muted-foreground">
-                      {note.icon || (note.pageType === 'canvas' ? <Layout size={16} /> : <FileText size={16} />)}
+                      {getNoteIcon(note)}
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                       {note.title || 'Untitled'}

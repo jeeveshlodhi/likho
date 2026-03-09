@@ -8,6 +8,9 @@ import InlineEdit from '@/components/shared/InlineEdit';
 import NoteItem from './NoteItem';
 import NewPageModal from './NewPageModal';
 import { SIDEBAR_NOTE_DRAG_TYPE } from './NoteItem';
+import {
+  getTemplateContent,
+} from '@/lib/templateRegistry';
 
 interface FolderItemProps {
   folder: FolderWithChildren;
@@ -29,82 +32,49 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     setActiveFolder,
   } = useWorkspaceStore();
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
   const [newPageModalOpen, setNewPageModalOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
 
-  const isActiveFolder = activeFolderId === folder.id;
-
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      setIsDragOver(true);
-    },
-    []
-  );
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      setIsDragOver(false);
-      if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE) || !onDropNote) return;
-      e.preventDefault();
-      try {
-        const payload = JSON.parse(e.dataTransfer.getData(SIDEBAR_NOTE_DRAG_TYPE)) as {
-          noteId: string;
-          spaceType: string;
-        };
-        if (payload.spaceType !== folder.spaceType) return;
-        if (!folder.isExpanded) toggleFolderExpanded(folder.id);
-        onDropNote(payload.noteId, folder.id);
-      } catch {
-        // ignore invalid data
-      }
-    },
-    [folder.id, folder.spaceType, folder.isExpanded, toggleFolderExpanded, onDropNote]
-  );
-
-  const handleChevronClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      toggleFolderExpanded(folder.id);
-    },
-    [folder.id, toggleFolderExpanded]
-  );
-
-  const handleOpenIndex = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setActiveFolder(folder.id);
-      navigate(`/dashboard/folder/${folder.id}`);
-    },
-    [folder.id, setActiveFolder, navigate]
-  );
+  const isActive = activeFolderId === folder.id;
+  const isExpanded = folder.isExpanded;
+  const paddingLeft = 8 + depth * 12;
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenuPos({ x: e.clientX, y: e.clientY });
+    setMenuPosition({ x: e.clientX, y: e.clientY });
+    setIsMenuOpen(true);
   }, []);
 
-  const openNewPageModal = useCallback((e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setNewPageModalOpen(true);
-  }, []);
+  const openNewPageModal = useCallback(
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      setNewPageModalOpen(true);
+    },
+    [setNewPageModalOpen]
+  );
 
   const handleNewPageSelect = useCallback(
     (_spaceType: SpaceType, templateId: PageType) => {
       if (!folder.isExpanded) toggleFolderExpanded(folder.id);
-      const note =
-        templateId === 'canvas'
-          ? createCanvas(folder.id, folder.spaceType)
-          : createNote(folder.id, folder.spaceType);
+
+      const content = getTemplateContent(templateId);
+
+      // Handle different content types
+      let note;
+      if (content.type === 'canvas') {
+        note = createCanvas(folder.id, folder.spaceType);
+        // Update with proper canvas content if needed
+        if (content.data.elements?.length > 0) {
+          note.content = content.data;
+        }
+      } else {
+        // For all other types (note, kanban, meeting, etc.)
+        note = createNote(folder.id, folder.spaceType, templateId, content.data);
+      }
+
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
     },
@@ -128,99 +98,154 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     {
       label: 'Rename',
       icon: <Pencil size={14} />,
-      onClick: () => setEditing(true),
+      onClick: () => setIsRenaming(true),
     },
     {
       label: 'Delete',
       icon: <Trash2 size={14} />,
+      destructive: true,
       onClick: () => deleteFolder(folder.id),
-      variant: 'danger',
     },
   ];
 
-  return (
-    <>
-      <div onContextMenu={handleContextMenu}>
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent ${
-            isDragOver ? 'bg-primary/15 ring-1 ring-primary/30' : ''
-          } ${
-            isActiveFolder
-              ? 'bg-primary/10 text-primary'
-              : 'text-foreground'
-          }`}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        >
-          <button
-            type="button"
-            onClick={handleChevronClick}
-            className="flex-shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            aria-label={folder.isExpanded ? 'Collapse folder' : 'Expand folder'}
-          >
-            <ChevronRight
-              size={14}
-              className={`transition-transform ${
-                folder.isExpanded ? 'rotate-90' : ''
-              }`}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              if (!editing) handleOpenIndex(e);
-            }}
-            className="flex min-w-0 flex-1 items-center gap-1 rounded text-left"
-          >
-            <span className="flex-shrink-0">
-              {folder.icon || <Folder size={14} className="text-muted-foreground" />}
-            </span>
-            <InlineEdit
-              value={folder.name}
-              editing={editing}
-              onEditEnd={() => setEditing(false)}
-              onSave={(name) => renameFolder(folder.id, name)}
-              className="min-w-0 flex-1 text-sm"
-            />
-          </button>
-          <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-            <button onClick={openNewPageModal} title="New page">
-              <Plus size={14} className="text-muted-foreground hover:text-foreground" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                setMenuPos({ x: rect.left, y: rect.bottom + 4 });
-              }}
-            >
-              <MoreHorizontal size={14} className="text-muted-foreground hover:text-foreground" />
-            </button>
-          </div>
-        </div>
+  const goToFolderIndex = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setActiveFolder(folder.id);
+      navigate(`/dashboard/folder/${folder.id}`);
+    },
+    [folder.id, setActiveFolder, navigate]
+  );
 
-        {folder.isExpanded && (
-          <div>
-            {folder.children.map((child) => (
-              <FolderItem key={child.id} folder={child} depth={depth + 1} onDropNote={onDropNote} />
-            ))}
-            {folder.notes.map((note) => (
-              <div key={note.id} style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}>
-                <NoteItem note={note} />
-              </div>
-            ))}
-          </div>
-        )}
+  // Drag and drop handlers
+  const [isDragOver, setIsDragOver] = useState(false);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsDragOver(true);
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
+  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      setIsDragOver(false);
+      if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
+      e.preventDefault();
+      try {
+        const payload = JSON.parse(e.dataTransfer.getData(SIDEBAR_NOTE_DRAG_TYPE)) as {
+          noteId: string;
+          spaceType: string;
+        };
+        if (payload.spaceType !== folder.spaceType) return;
+        onDropNote?.(payload.noteId, folder.id);
+      } catch {
+        // ignore
+      }
+    },
+    [folder.id, folder.spaceType, onDropNote]
+  );
+
+  return (
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div
+        onContextMenu={handleContextMenu}
+        className={`group mb-0.5 flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
+          isDragOver
+            ? 'bg-primary/10 text-primary'
+            : isActive
+              ? 'bg-accent text-accent-foreground'
+              : 'hover:bg-accent'
+        }`}
+        style={{ paddingLeft }}
+      >
+        <button
+          onClick={() => toggleFolderExpanded(folder.id)}
+          className="flex flex-1 items-center gap-1 overflow-hidden"
+        >
+          <ChevronRight
+            size={14}
+            className={`flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          />
+          <Folder size={14} className="flex-shrink-0 text-muted-foreground" />
+          {isRenaming ? (
+            <InlineEdit
+              initialValue={folder.name}
+              onSave={(newName) => {
+                renameFolder(folder.id, newName);
+                setIsRenaming(false);
+              }}
+              onCancel={() => setIsRenaming(false)}
+              className="min-w-0 flex-1"
+            />
+          ) : (
+            <span
+              onClick={goToFolderIndex}
+              className="min-w-0 flex-1 truncate text-left"
+              title={folder.name}
+            >
+              {folder.name}
+            </span>
+          )}
+        </button>
+
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+          <button
+            onClick={openNewPageModal}
+            title="New page"
+            className="rounded p-0.5 hover:bg-accent"
+          >
+            <Plus size={14} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuPosition({ x: e.clientX, y: e.clientY });
+              setIsMenuOpen(true);
+            }}
+            className="rounded p-0.5 hover:bg-accent"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        </div>
       </div>
-      <ContextMenu items={menuItems} position={menuPos} onClose={() => setMenuPos(null)} />
+
       <NewPageModal
         open={newPageModalOpen}
         onClose={() => setNewPageModalOpen(false)}
         context={{ folderId: folder.id, spaceType: folder.spaceType }}
         onSelect={handleNewPageSelect}
       />
-    </>
+
+      <ContextMenu
+        items={menuItems}
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        position={menuPosition}
+      />
+
+      {isExpanded && (
+        <div className="mb-0.5">
+          {folder.children.map((child) => (
+            <FolderItem
+              key={child.id}
+              folder={child}
+              depth={depth + 1}
+              onDropNote={onDropNote}
+            />
+          ))}
+          {folder.notes.map((note) => (
+            <div key={note.id} style={{ paddingLeft: paddingLeft + 16 }}>
+              <NoteItem note={note} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

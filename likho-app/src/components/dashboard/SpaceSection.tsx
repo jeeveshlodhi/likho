@@ -5,6 +5,11 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { PageType, SpaceType } from '@/types/workspace';
 import { buildFolderTree, getRootNotes } from '@/utils/folderTree';
 import { useWorkspace, useSpaces, useCreatePage, useMovePage } from '@/hooks/useWorkspace';
+import {
+  getTemplateById,
+  getTemplateContent,
+  type TemplateContent,
+} from '@/lib/templateRegistry';
 import FolderItem from './FolderItem';
 import NoteItem from './NoteItem';
 import NewPageModal from './NewPageModal';
@@ -59,30 +64,28 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
 
   const handleNewPageSelect = useCallback(
     async (resolvedSpaceType: SpaceType, templateId: PageType) => {
+      const template = getTemplateById(templateId);
+      const templateContent = getTemplateContent(templateId);
+      const defaultTitle = template?.defaultTitle || 'Untitled';
+
       // For online space, create on backend first (all page types)
       if (resolvedSpaceType === 'online' && workspace?.id && spaces?.length && createPageMutation.mutateAsync) {
         const onlineSpace = spaces.find((s) => s.type === 'online');
         if (onlineSpace) {
           try {
-            const defaultContent = templateId === 'kanban'
-              ? { columns: [], columnData: {}, cardData: {} }
-              : templateId === 'canvas'
-                ? { elements: [], camera: { x: 0, y: 0, zoom: 1 } }
-                : undefined;
-
             const page = await createPageMutation.mutateAsync({
               space_id: onlineSpace.id,
-              title: templateId === 'canvas' ? 'Untitled canvas' : '',
+              title: defaultTitle,
               page_type: templateId,
-              content: defaultContent,
+              content: templateContent.data,
             });
             const note = {
               id: page.id,
-              title: page.title || '',
-              content: page.content ?? defaultContent,
+              title: page.title || defaultTitle,
+              content: page.content ?? templateContent.data,
               folderId: page.parent_id,
               spaceType: 'online' as const,
-              pageType: templateId,
+              pageType: (page.page_type as PageType) || templateId,
               icon: page.icon ?? null,
               coverImage: page.cover_url ?? undefined,
               sortOrder: page.sort_order ?? 0,
@@ -99,23 +102,23 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
         }
       }
 
-      // Offline / fallback: create locally
-      if (templateId === 'canvas') {
+      // Offline / fallback: create locally using template registry
+      const content = getTemplateContent(templateId);
+
+      // Handle different content types
+      if (content.type === 'canvas') {
         const note = createCanvas(null, resolvedSpaceType);
+        // Update with proper canvas content if needed
+        if (content.data.elements?.length > 0) {
+          note.content = content.data;
+        }
         setActiveNote(note.id);
         navigate(`/dashboard/note/${note.id}`);
         return;
       }
 
-      if (templateId === 'kanban') {
-        const note = createNote(null, resolvedSpaceType, 'kanban');
-        note.content = { columns: [], columnData: {}, cardData: {} };
-        setActiveNote(note.id);
-        navigate(`/dashboard/note/${note.id}`);
-        return;
-      }
-
-      const note = createNote(null, resolvedSpaceType);
+      // For all other types (note, kanban, meeting, etc.)
+      const note = createNote(null, resolvedSpaceType, templateId, content.data);
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
     },
@@ -251,10 +254,12 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
             onDrop={handleRootDrop}
             className={`mb-0.5 rounded-md border border-dashed px-2 py-1.5 text-center text-xs transition-colors ${rootZoneDragOver
               ? 'border-primary/50 bg-primary/10 text-primary'
-              : 'border-transparent text-muted-foreground'
+              : folderTree.length === 0 && rootNotes.length === 0
+                ? 'border-border text-muted-foreground'
+                : 'border-transparent text-muted-foreground/50 hover:border-border hover:text-muted-foreground'
               }`}
           >
-            {rootZoneDragOver ? 'Drop to move out of folder' : 'No folder'}
+            {rootZoneDragOver ? 'Drop to move out of folder' : folderTree.length === 0 && rootNotes.length === 0 ? 'No folder' : 'Drop here for root level'}
           </div>
 
           {/* Folders */}

@@ -1,7 +1,15 @@
 export type SpaceType = 'online' | 'offline';
 
-/** Page type: note = BlockNote doc, canvas = Custom Canvas */
-export type PageType = 'note' | 'canvas' | 'kanban';
+/** Page type: note = BlockNote doc, canvas = Custom Canvas, kanban = Task board, etc */
+export type PageType =
+  | 'note'
+  | 'canvas'
+  | 'kanban'
+  | 'meeting'
+  | 'project'
+  | 'journal'
+  | 'documentation'
+  | 'brainstorm';
 
 export interface Folder {
   id: string;

@@ -40,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken,
           refreshToken,
           isAuthenticated: !!accessToken,
+          isGuest: false,
         }),
 
       setLoading: (loading) =>

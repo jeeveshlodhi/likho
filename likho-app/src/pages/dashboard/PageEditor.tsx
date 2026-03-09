@@ -1,10 +1,26 @@
 import { useParams } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import type { PageType } from '@/types/workspace';
 import NoteEditor from './NoteEditor';
 import CanvasEditor from './CanvasEditor';
 import KanbanEditor from './KanbanEditor';
 
-/** Routes to NoteEditor or CanvasEditor based on page type. */
+// Define which page types use which editor
+const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban'> = {
+  // Document-based templates use NoteEditor
+  note: 'note',
+  meeting: 'note',
+  project: 'note',
+  journal: 'note',
+  documentation: 'note',
+  // Visual templates
+  canvas: 'canvas',
+  brainstorm: 'canvas',
+  // Planning templates
+  kanban: 'kanban',
+};
+
+/** Routes to appropriate editor based on page type. */
 export default function PageEditor() {
   const { noteId } = useParams<{ noteId: string }>();
   const notes = useWorkspaceStore((s) => s.notes);
@@ -14,13 +30,15 @@ export default function PageEditor() {
     return null;
   }
 
-  if (note.pageType === 'canvas') {
-    return <CanvasEditor />;
-  }
+  const editorType = EDITOR_ROUTES[note.pageType || 'note'] || 'note';
 
-  if (note.pageType === 'kanban') {
-    return <KanbanEditor />;
+  switch (editorType) {
+    case 'canvas':
+      return <CanvasEditor />;
+    case 'kanban':
+      return <KanbanEditor />;
+    case 'note':
+    default:
+      return <NoteEditor />;
   }
-
-  return <NoteEditor />;
 }

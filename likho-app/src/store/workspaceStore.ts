@@ -21,7 +21,7 @@ interface WorkspaceState {
   moveFolder: (id: string, newParentId: string | null) => void;
 
   // Note actions
-  createNote: (folderId: string | null, spaceType: SpaceType, pageType?: PageType) => Note;
+  createNote: (folderId: string | null, spaceType: SpaceType, pageType?: PageType, content?: any) => Note;
   createCanvas: (folderId: string | null, spaceType: SpaceType) => Note;
   addNote: (note: Note) => void;
   updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon' | 'coverImage' | 'pageType'>>) => void;
@@ -103,7 +103,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           ),
         })),
 
-      createNote: (folderId, spaceType, pageType = 'note') => {
+      createNote: (folderId, spaceType, pageType = 'note', content) => {
         const now = new Date().toISOString();
         const siblings = get().notes.filter(
           (n) => n.spaceType === spaceType && n.folderId === folderId
@@ -111,7 +111,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const note: Note = {
           id: nanoid(),
           title: pageType === 'canvas' ? 'Untitled canvas' : '',
-          content: undefined,
+          content,
           folderId,
           spaceType,
           pageType,

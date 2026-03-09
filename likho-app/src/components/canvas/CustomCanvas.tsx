@@ -38,7 +38,7 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
 
     // Draw settings
     const [strokeColor, setStrokeColor] = useState(theme === 'dark' ? '#ffffff' : '#000000');
-    const [fillColor, setFillColor] = useState('transparent');
+    const [fillColor, setFillColor] = useState(theme === 'dark' ? '#1f2937' : '#ffffff');
     const [strokeWidth, setStrokeWidth] = useState(2);
 
     // Interaction state
@@ -83,10 +83,17 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
         }
     }, [redo]);
 
+    // Track if any text element is being edited
+    const [isEditingText, setIsEditingText] = useState(false);
+
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return;
+            // Skip if user is editing text anywhere (input, textarea, or contenteditable)
+            const activeEl = document.activeElement;
+            if (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement) return;
+            if (activeEl?.getAttribute('contenteditable') === 'true') return;
+            if (isEditingText) return;
 
             // Spacebar pan
             if (e.code === 'Space' && !isSpaceRef.current) {
@@ -96,22 +103,28 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
             }
 
             // Tool shortcuts
-            if (e.key === 'v') setCurrentTool('select');
-            if (e.key === 'p') setCurrentTool('freehand');
-            if (e.key === 'r') setCurrentTool('rectangle');
-            if (e.key === 't') setCurrentTool('text');
-            if (e.key === 'e') setCurrentTool('ellipse');
-            if (e.key === 'l') setCurrentTool('line');
-            if (e.key === 'a') setCurrentTool('arrow');
+            if (e.key === 'v') { e.preventDefault(); setCurrentTool('select'); return; }
+            if (e.key === 'p') { e.preventDefault(); setCurrentTool('freehand'); return; }
+            if (e.key === 'r') { e.preventDefault(); setCurrentTool('rectangle'); return; }
+            if (e.key === 't') { e.preventDefault(); setCurrentTool('text'); return; }
+            if (e.key === 'e') { e.preventDefault(); setCurrentTool('ellipse'); return; }
+            if (e.key === 'l') { e.preventDefault(); setCurrentTool('line'); return; }
+            if (e.key === 'a') { e.preventDefault(); setCurrentTool('arrow'); return; }
 
-            // Delete
-            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIds.size > 0) {
-                setElements(prev => {
-                    const next = prev.filter(el => !selectedIds.has(el.id));
-                    pushState(next);
-                    return next;
-                });
-                setSelectedIds(new Set());
+            // Delete - prevent browser back navigation
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                if (selectedIds.size > 0) {
+                    e.preventDefault();
+                    setElements(prev => {
+                        const next = prev.filter(el => !selectedIds.has(el.id));
+                        pushState(next);
+                        return next;
+                    });
+                    setSelectedIds(new Set());
+                } else {
+                    // Prevent back navigation when canvas is focused but nothing selected
+                    e.preventDefault();
+                }
             }
 
             // Undo/Redo
@@ -219,6 +232,7 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
             setDraftElement({
                 id: uuidv4(), type: 'rectangle', x: pos.x, y: pos.y,
                 width: 0, height: 0, strokeColor, backgroundColor: fillColor, strokeWidth,
+                borderRadius: 8,
             });
         } else if (currentTool === 'ellipse') {
             setDraftElement({
@@ -446,6 +460,10 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
         });
     };
 
+    const handleTextEditingChange = (isEditing: boolean) => {
+        setIsEditingText(isEditing);
+    };
+
     const getCursor = (): string => {
         if (mode === 'panning' || currentTool === 'pan') return 'grab';
         if (mode === 'moving') return 'move';
@@ -457,7 +475,7 @@ export default function CustomCanvas({ initialData, onChange, theme }: CustomCan
         switch (el.type) {
             case 'freehand': return <FreehandRender key={el.id} element={el} isSelected={isSelected} />;
             case 'rectangle': return <RectangleRender key={el.id} element={el} isSelected={isSelected} />;
-            case 'text': return <TextRender key={el.id} element={el} isSelected={isSelected} onTextChange={handleTextChange} />;
+            case 'text': return <TextRender key={el.id} element={el} isSelected={isSelected} onTextChange={handleTextChange} onEditingChange={handleTextEditingChange} />;
             case 'ellipse': return <EllipseRender key={el.id} element={el} isSelected={isSelected} />;
             case 'line': return <LineRender key={el.id} element={el} isSelected={isSelected} />;
             case 'arrow': return <ArrowRender key={el.id} element={el} isSelected={isSelected} />;

@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import SpaceSection from './SpaceSection';
 import SidebarFooter from './SidebarFooter';
+import { isTauri } from '@/utils/platform';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
@@ -56,10 +57,10 @@ export default function Sidebar() {
         {showOnlineSpace && (
           <>
             <SpaceSection spaceType="online" />
-            <div className="my-1 border-t border-sidebar-border" />
+            {isTauri() && <div className="my-1 border-t border-sidebar-border" />}
           </>
         )}
-        <SpaceSection spaceType="offline" />
+        {isTauri() && <SpaceSection spaceType="offline" />}
       </div>
 
       {/* Footer */}

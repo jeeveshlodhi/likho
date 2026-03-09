@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useAuthStore } from "@/store/authStore";
+import { isTauri } from "@/utils/platform";
 
 const Header = () => {
     const navigate = useNavigate();
@@ -18,12 +19,14 @@ const Header = () => {
             </Link>
             <div className="flex items-center gap-3">
                 <ThemeToggle showLabel={true} />
-                <button
-                    onClick={handleGuestAccess}
-                    className="rounded-lg border border-border/50 bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                    Continue as Guest
-                </button>
+                {isTauri() && (
+                    <button
+                        onClick={handleGuestAccess}
+                        className="rounded-lg border border-border/50 bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    >
+                        Continue as Guest
+                    </button>
+                )}
                 <Link
                     to="/auth/sign-in"
                     className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"

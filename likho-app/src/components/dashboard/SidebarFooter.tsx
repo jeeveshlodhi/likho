@@ -89,6 +89,7 @@ export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
         <div className="flex items-center gap-1">
           <ThemeToggle showLabel={false} className="p-1" />
           <button
+            onClick={() => navigate('/dashboard/settings')}
             title="Settings"
             className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
