@@ -1,10 +1,11 @@
-import { Search, PanelLeftClose, PanelLeft, Link2, Hash, Share2 } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Link2, Hash, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import SpaceSection from './SpaceSection';
 import SidebarFooter from './SidebarFooter';
 import { isTauri } from '@/utils/platform';
+import { SidebarSearch } from '@/components/search';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
@@ -24,6 +25,9 @@ export default function Sidebar() {
             <PanelLeft size={18} />
           </button>
         </div>
+        <div className="flex flex-col items-center gap-2 py-2">
+          <SidebarSearch collapsed />
+        </div>
         <div className="flex-1" />
         <SidebarFooter collapsed />
       </div>
@@ -38,12 +42,7 @@ export default function Sidebar() {
           Likho
         </span>
         <div className="flex items-center gap-1">
-          <button
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            title="Search"
-          >
-            <Search size={16} />
-          </button>
+          <SidebarSearch />
           <button
             onClick={toggleSidebar}
             className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"

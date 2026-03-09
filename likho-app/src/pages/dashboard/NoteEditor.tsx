@@ -1,5 +1,44 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
+
+// Helper function to safely parse note content for BlockNote
+function getInitialContent(content: any): any[] | undefined {
+  if (!content) return undefined;
+  
+  // If it's already an array, use it
+  if (Array.isArray(content)) {
+    return content.length > 0 ? content : undefined;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // If parsing fails, return undefined to let BlockNote use defaults
+      return undefined;
+    }
+  }
+  
+  // If it's an object with a data property (template format), extract the blocks
+  if (typeof content === 'object' && content !== null) {
+    if (content.data && Array.isArray(content.data)) {
+      return content.data;
+    }
+    if (content.content && Array.isArray(content.content)) {
+      return content.content;
+    }
+    // Check for BlockNote document format
+    if (content.type === 'doc' && Array.isArray(content.content)) {
+      return content.content;
+    }
+  }
+  
+  return undefined;
+}
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/shadcn';
 import {
@@ -158,7 +197,7 @@ export default function NoteEditor() {
 
   const editor = useCreateBlockNote({
     schema,
-    initialContent: collabSession ? undefined : (note?.content || undefined),
+    initialContent: collabSession ? undefined : getInitialContent(note?.content),
     collaboration: collabSession
       ? {
           provider: collabSession.provider,
@@ -200,6 +239,23 @@ export default function NoteEditor() {
   useEffect(() => {
     if (noteId) setActiveNote(noteId);
   }, [noteId, setActiveNote]);
+
+  // Update editor content when note changes
+  useEffect(() => {
+    if (!editor || !note) return;
+    
+    // Only update if this is not a collaboration session
+    if (collabSession) return;
+    
+    const content = getInitialContent(note.content);
+    if (content) {
+      // Replace the entire document with the new note's content
+      editor.replaceBlocks(editor.document, content);
+    } else {
+      // If no content, clear to a single empty paragraph
+      editor.replaceBlocks(editor.document, [{ type: 'paragraph' }]);
+    }
+  }, [note?.id, editor, collabSession]);
 
   useEffect(() => {
     if (!note && noteId) {
@@ -252,7 +308,9 @@ export default function NoteEditor() {
             </button>
           )}
         </div>
-        {editor && <NoteExportActions editor={editor} note={note} />}
+        <div className="flex items-center gap-2">
+          {editor && <NoteExportActions editor={editor} note={note} />}
+        </div>
       </div>
       
       {note.spaceType === 'online' && (

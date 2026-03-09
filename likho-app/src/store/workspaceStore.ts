@@ -108,10 +108,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const siblings = get().notes.filter(
           (n) => n.spaceType === spaceType && n.folderId === folderId
         );
+        
+        // Ensure content is properly structured for new notes
+        // If content is undefined or null, create empty BlockNote structure
+        let processedContent = content;
+        if (!content || (typeof content === 'object' && !content.type && !Array.isArray(content))) {
+          processedContent = {
+            type: 'doc',
+            content: [{ type: 'paragraph' }],
+          };
+        }
+        
         const note: Note = {
           id: nanoid(),
           title: pageType === 'canvas' ? 'Untitled canvas' : '',
-          content,
+          content: processedContent,
           folderId,
           spaceType,
           pageType,

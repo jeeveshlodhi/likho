@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import { updatePage } from '@/lib/workspaceApi';
+import { SearchService } from '@/lib/search-service';
 import type { Note } from '@/types/workspace';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -27,6 +28,37 @@ export function useAutoSave(noteId: string, delay = 500) {
       if (localTimeoutRef.current) clearTimeout(localTimeoutRef.current);
       localTimeoutRef.current = setTimeout(() => {
         updateNote(noteId, updates);
+
+        // Sync note to Rust DB then index for RAG search
+        const note = notes.find((n) => n.id === noteId);
+        if (note) {
+          const contentVal = updates.content !== undefined ? updates.content : note.content;
+          const contentStr =
+            contentVal == null
+              ? ''
+              : typeof contentVal === 'string'
+              ? contentVal
+              : JSON.stringify(contentVal);
+
+          const noteForBackend = {
+            id: noteId,
+            title: (updates.title !== undefined ? updates.title : note.title) || 'Untitled',
+            content: contentStr,
+            folder_id: note.folderId || '',
+            created_at: note.createdAt,
+            updated_at: new Date().toISOString(),
+          };
+
+          SearchService.syncNote(noteForBackend)
+            .then(() => {
+              if (updates.content !== undefined) {
+                return SearchService.indexNote(noteId);
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to sync/index note for search:', err);
+            });
+        }
       }, delay);
 
       // For online notes: also persist to backend (slightly longer debounce)

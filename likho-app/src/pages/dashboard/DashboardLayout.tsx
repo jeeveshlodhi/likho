@@ -3,6 +3,7 @@ import { Outlet } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { useOnlineSync } from '@/hooks/useOnlineSync';
+import { AppShortcuts } from '@/components/search';
 
 export default function DashboardLayout() {
   const { sidebarCollapsed, sidebarWidth, setSidebarWidth } = useWorkspaceStore();
@@ -40,26 +41,31 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="flex h-full min-h-0 bg-background">
-      {/* Sidebar */}
-      <div
-        className="relative flex h-full min-h-0 flex-shrink-0 flex-col"
-        style={{ width: sidebarCollapsed ? 48 : sidebarWidth }}
-      >
-        <Sidebar />
-        {/* Resize handle */}
-        {!sidebarCollapsed && (
-          <div
-            onMouseDown={handleMouseDown}
-            className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/20"
-          />
-        )}
+    <>
+      <div className="flex h-full min-h-0 bg-background">
+        {/* Sidebar */}
+        <div
+          className="relative flex h-full min-h-0 flex-shrink-0 flex-col"
+          style={{ width: sidebarCollapsed ? 48 : sidebarWidth }}
+        >
+          <Sidebar />
+          {/* Resize handle */}
+          {!sidebarCollapsed && (
+            <div
+              onMouseDown={handleMouseDown}
+              className="absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/20"
+            />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          <Outlet />
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        <Outlet />
-      </div>
-    </div>
+      {/* Global Keyboard Shortcuts */}
+      <AppShortcuts />
+    </>
   );
 }
