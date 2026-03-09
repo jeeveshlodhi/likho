@@ -59,40 +59,30 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
 
   const handleNewPageSelect = useCallback(
     async (resolvedSpaceType: SpaceType, templateId: PageType) => {
-      // 1. Canvas Handling
-      if (templateId === 'canvas') {
-        const note = createCanvas(null, resolvedSpaceType);
-        setActiveNote(note.id);
-        navigate(`/dashboard/note/${note.id}`);
-        return;
-      }
-
-      // 2. Kanban Handling
-      if (templateId === 'kanban') {
-        // Create it as a normal note but explicitly set type to kanban
-        const note = createNote(null, resolvedSpaceType);
-        note.pageType = 'kanban';
-        // Force the creation of the base board structure instead of leaving it empty
-        note.content = { columns: [], cards: {} };
-        // Replace in store immediately (we cheat slightly by mutating since createNote returns the reference temporarily)
-        setActiveNote(note.id);
-        navigate(`/dashboard/note/${note.id}`);
-        return;
-      }
+      // For online space, create on backend first (all page types)
       if (resolvedSpaceType === 'online' && workspace?.id && spaces?.length && createPageMutation.mutateAsync) {
         const onlineSpace = spaces.find((s) => s.type === 'online');
         if (onlineSpace) {
           try {
+            const defaultContent = templateId === 'kanban'
+              ? { columns: [], columnData: {}, cardData: {} }
+              : templateId === 'canvas'
+                ? { elements: [], camera: { x: 0, y: 0, zoom: 1 } }
+                : undefined;
+
             const page = await createPageMutation.mutateAsync({
               space_id: onlineSpace.id,
-              title: '',
+              title: templateId === 'canvas' ? 'Untitled canvas' : '',
+              page_type: templateId,
+              content: defaultContent,
             });
             const note = {
               id: page.id,
               title: page.title || '',
-              content: page.content ?? undefined,
+              content: page.content ?? defaultContent,
               folderId: page.parent_id,
               spaceType: 'online' as const,
+              pageType: templateId,
               icon: page.icon ?? null,
               coverImage: page.cover_url ?? undefined,
               sortOrder: page.sort_order ?? 0,
@@ -108,6 +98,23 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
           }
         }
       }
+
+      // Offline / fallback: create locally
+      if (templateId === 'canvas') {
+        const note = createCanvas(null, resolvedSpaceType);
+        setActiveNote(note.id);
+        navigate(`/dashboard/note/${note.id}`);
+        return;
+      }
+
+      if (templateId === 'kanban') {
+        const note = createNote(null, resolvedSpaceType, 'kanban');
+        note.content = { columns: [], columnData: {}, cardData: {} };
+        setActiveNote(note.id);
+        navigate(`/dashboard/note/${note.id}`);
+        return;
+      }
+
       const note = createNote(null, resolvedSpaceType);
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FileText, Plus } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useAuthStore } from '@/store/authStore';
 import { useWorkspace, useSpaces, useCreatePage } from '@/hooks/useWorkspace';
 import type { PageType, SpaceType } from '@/types/workspace';
 import NewPageModal from '@/components/dashboard/NewPageModal';
@@ -9,32 +10,37 @@ import NewPageModal from '@/components/dashboard/NewPageModal';
 export default function DashboardHome() {
   const navigate = useNavigate();
   const { createNote, createCanvas, addNote, setActiveNote } = useWorkspaceStore();
+  const { isGuest } = useAuthStore();
   const { data: workspace } = useWorkspace();
   const { data: spaces } = useSpaces(workspace?.id);
   const createPageMutation = useCreatePage();
   const [newPageModalOpen, setNewPageModalOpen] = useState(false);
 
   const handleNewPageSelect = async (spaceType: SpaceType, templateId: PageType) => {
-    if (templateId === 'canvas') {
-      const note = createCanvas(null, spaceType);
-      setActiveNote(note.id);
-      navigate(`/dashboard/note/${note.id}`);
-      return;
-    }
+    // For online space, create on backend (all page types)
     if (spaceType === 'online' && workspace?.id && spaces?.length && createPageMutation.mutateAsync) {
       const onlineSpace = spaces.find((s) => s.type === 'online');
       if (onlineSpace) {
         try {
+          const defaultContent = templateId === 'kanban'
+            ? { columns: [], columnData: {}, cardData: {} }
+            : templateId === 'canvas'
+              ? { elements: [], camera: { x: 0, y: 0, zoom: 1 } }
+              : undefined;
+
           const page = await createPageMutation.mutateAsync({
             space_id: onlineSpace.id,
-            title: '',
+            title: templateId === 'canvas' ? 'Untitled canvas' : '',
+            page_type: templateId,
+            content: defaultContent,
           });
           const note = {
             id: page.id,
             title: page.title || '',
-            content: page.content ?? undefined,
+            content: page.content ?? defaultContent,
             folderId: page.parent_id,
             spaceType: 'online' as const,
+            pageType: templateId,
             icon: page.icon ?? null,
             coverImage: page.cover_url ?? undefined,
             sortOrder: page.sort_order ?? 0,
@@ -46,13 +52,27 @@ export default function DashboardHome() {
           navigate(`/dashboard/note/${note.id}`);
           return;
         } catch {
-          const note = createNote(null, 'online');
-          setActiveNote(note.id);
-          navigate(`/dashboard/note/${note.id}`);
-          return;
+          // Fallback to local-only
         }
       }
     }
+
+    // Offline / fallback: create locally
+    if (templateId === 'canvas') {
+      const note = createCanvas(null, spaceType);
+      setActiveNote(note.id);
+      navigate(`/dashboard/note/${note.id}`);
+      return;
+    }
+
+    if (templateId === 'kanban') {
+      const note = createNote(null, spaceType, 'kanban');
+      note.content = { columns: [], columnData: {}, cardData: {} };
+      setActiveNote(note.id);
+      navigate(`/dashboard/note/${note.id}`);
+      return;
+    }
+
     const note = createNote(null, spaceType);
     setActiveNote(note.id);
     navigate(`/dashboard/note/${note.id}`);
@@ -68,7 +88,9 @@ export default function DashboardHome() {
           Welcome to Likho
         </h2>
         <p className="mb-6 text-sm text-muted-foreground">
-          Select a page from the sidebar or create a new one to get started.
+          {isGuest
+            ? 'You are in guest mode. Create offline pages to get started, or sign in for online sync.'
+            : 'Select a page from the sidebar or create a new one to get started.'}
         </p>
         <button
           onClick={() => setNewPageModalOpen(true)}

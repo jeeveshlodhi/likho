@@ -36,6 +36,7 @@ export interface PageResponse {
   title: string;
   icon: string | null;
   cover_url: string | null;
+  page_type: string;
   is_folder: boolean;
   sort_order: number;
   version: number;
@@ -51,6 +52,7 @@ export interface PageCreateData {
   is_folder?: boolean;
   icon?: string | null;
   content?: any;
+  page_type?: string;
 }
 
 export interface PageUpdateData {

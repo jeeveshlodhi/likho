@@ -1,4 +1,4 @@
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogIn, LogOut, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
@@ -9,10 +9,15 @@ interface SidebarFooterProps {
 
 export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, isGuest, logout } = useAuthStore();
 
   const handleLogout = () => {
     logout();
+    navigate('/auth/sign-in');
+  };
+
+  const handleSignIn = () => {
+    logout(); // clear guest state
     navigate('/auth/sign-in');
   };
 
@@ -20,12 +25,48 @@ export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
     return (
       <div className="border-t border-sidebar-border p-2 flex flex-col gap-2">
         <ThemeToggle showLabel={false} className="w-full justify-center" />
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent"
-        >
-          <LogOut size={18} />
-        </button>
+        {isGuest ? (
+          <button
+            onClick={handleSignIn}
+            className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent"
+            title="Sign in to unlock online space"
+          >
+            <LogIn size={18} />
+          </button>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent"
+          >
+            <LogOut size={18} />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <div className="border-t border-sidebar-border p-2">
+        <div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <User size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">Guest</p>
+            <p className="truncate text-xs text-muted-foreground">Offline only</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle showLabel={false} className="p-1" />
+            <button
+              onClick={handleSignIn}
+              title="Sign in to unlock online space"
+              className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-accent"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

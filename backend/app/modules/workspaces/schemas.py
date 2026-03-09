@@ -45,6 +45,7 @@ class PageCreate(BaseModel):
     is_folder: bool = False
     icon: str | None = None
     content: Any | None = None
+    page_type: str = "note"  # 'note', 'canvas', 'kanban'
 
 
 class PageUpdate(BaseModel):
@@ -70,6 +71,7 @@ class PageResponse(BaseModel):
     title: str
     icon: str | None = None
     cover_url: str | None = None
+    page_type: str = "note"
     is_folder: bool
     sort_order: float
     version: int

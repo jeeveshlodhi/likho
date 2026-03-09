@@ -1,10 +1,13 @@
 import { Search, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useAuthStore } from '@/store/authStore';
 import SpaceSection from './SpaceSection';
 import SidebarFooter from './SidebarFooter';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
+  const { isAuthenticated, isGuest } = useAuthStore();
+  const showOnlineSpace = isAuthenticated && !isGuest;
 
   if (sidebarCollapsed) {
     return (
@@ -50,8 +53,12 @@ export default function Sidebar() {
 
       {/* Spaces */}
       <div className="flex-1 overflow-y-auto px-1.5 py-2">
-        <SpaceSection spaceType="online" />
-        <div className="my-1 border-t border-sidebar-border" />
+        {showOnlineSpace && (
+          <>
+            <SpaceSection spaceType="online" />
+            <div className="my-1 border-t border-sidebar-border" />
+          </>
+        )}
         <SpaceSection spaceType="offline" />
       </div>
 

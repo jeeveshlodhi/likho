@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Cloud, HardDrive } from 'lucide-react';
 import type { SpaceType } from '@/types/workspace';
 import type { PageType } from '@/types/workspace';
 import { PAGE_TEMPLATES } from '@/constants/pageTemplates';
+import { useAuthStore } from '@/store/authStore';
 
 export interface NewPageModalContext {
   folderId: string | null;
@@ -16,7 +17,7 @@ interface NewPageModalProps {
   onSelect: (spaceType: SpaceType, templateId: PageType) => void;
 }
 
-const SPACE_OPTIONS: { type: SpaceType; label: string; icon: typeof Cloud }[] = [
+const ALL_SPACE_OPTIONS: { type: SpaceType; label: string; icon: typeof Cloud }[] = [
   { type: 'online', label: 'Online space', icon: Cloud },
   { type: 'offline', label: 'Offline space', icon: HardDrive },
 ];
@@ -28,7 +29,16 @@ export default function NewPageModal({
   onSelect,
 }: NewPageModalProps) {
   const { spaceType: contextSpaceType } = context;
-  const needsSpaceStep = contextSpaceType === undefined;
+  const { isAuthenticated, isGuest } = useAuthStore();
+  const showOnlineSpace = isAuthenticated && !isGuest;
+
+  // Filter space options based on auth state
+  const spaceOptions = useMemo(
+    () => showOnlineSpace ? ALL_SPACE_OPTIONS : ALL_SPACE_OPTIONS.filter((o) => o.type !== 'online'),
+    [showOnlineSpace]
+  );
+
+  const needsSpaceStep = contextSpaceType === undefined && spaceOptions.length > 1;
 
   const [step, setStep] = useState<'space' | 'template'>('template');
   const [selectedSpace, setSelectedSpace] = useState<SpaceType | null>(null);
@@ -36,12 +46,12 @@ export default function NewPageModal({
   useEffect(() => {
     if (!open) {
       setStep(needsSpaceStep ? 'space' : 'template');
-      setSelectedSpace(contextSpaceType ?? null);
+      setSelectedSpace(contextSpaceType ?? (spaceOptions.length === 1 ? spaceOptions[0].type : null));
     } else {
       setStep(needsSpaceStep ? 'space' : 'template');
-      setSelectedSpace(contextSpaceType ?? null);
+      setSelectedSpace(contextSpaceType ?? (spaceOptions.length === 1 ? spaceOptions[0].type : null));
     }
-  }, [open, needsSpaceStep, contextSpaceType]);
+  }, [open, needsSpaceStep, contextSpaceType, spaceOptions]);
 
 
   const handleTemplateSelect = (templateId: PageType) => {
@@ -83,7 +93,7 @@ export default function NewPageModal({
                 Where should this page live?
               </p>
               <div className="grid grid-cols-2 gap-3">
-                {SPACE_OPTIONS.map(({ type, label, icon: Icon }) => (
+                {spaceOptions.map(({ type, label, icon: Icon }) => (
                   <button
                     key={type}
                     type="button"

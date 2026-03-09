@@ -2,10 +2,14 @@ import { useCallback, useRef } from 'react';
 import { Outlet } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import Sidebar from '@/components/dashboard/Sidebar';
+import { useOnlineSync } from '@/hooks/useOnlineSync';
 
 export default function DashboardLayout() {
   const { sidebarCollapsed, sidebarWidth, setSidebarWidth } = useWorkspaceStore();
   const resizing = useRef(false);
+
+  // Sync online pages from backend on mount (authenticated users only)
+  useOnlineSync();
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

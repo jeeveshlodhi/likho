@@ -7,16 +7,20 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard = ({ children }: AuthGuardProps) => {
-    const { isAuthenticated, accessToken, isLoading } = useAuthStore();
+    const { isAuthenticated, accessToken, isGuest, isLoading } = useAuthStore();
     const location = useLocation();
 
     if (isLoading) {
-        // You could replace this with a proper loading spinner component
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50/50">
                 <div className="w-8 h-8 border-4 border-black/20 border-t-black rounded-full animate-spin"></div>
             </div>
         );
+    }
+
+    // Guest users can access the dashboard (offline space only)
+    if (isGuest) {
+        return <>{children}</>;
     }
 
     if (!isAuthenticated || !accessToken) {

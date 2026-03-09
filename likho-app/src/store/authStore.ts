@@ -7,12 +7,14 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   isLoading: boolean;
 
   // Actions
   setUser: (user: UserResponse | null) => void;
   setTokens: (accessToken: string, refreshToken?: string | null) => void;
   setLoading: (loading: boolean) => void;
+  continueAsGuest: () => void;
   logout: () => void;
   reset: () => void;
 }
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      isGuest: false,
       isLoading: false,
 
       setUser: (user) =>
@@ -44,12 +47,22 @@ export const useAuthStore = create<AuthState>()(
           isLoading: loading,
         }),
 
+      continueAsGuest: () =>
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          isGuest: true,
+        }),
+
       logout: () =>
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          isGuest: false,
         }),
 
       reset: () =>
@@ -58,6 +71,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          isGuest: false,
           isLoading: false,
         }),
     }),
@@ -68,6 +82,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        isGuest: state.isGuest,
       }),
     }
   )

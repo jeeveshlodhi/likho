@@ -1,11 +1,15 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useAuthStore } from '@/store/authStore';
+import { updatePage } from '@/lib/workspaceApi';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import { useTheme } from '@/providers/ThemeProvider';
 import CustomCanvas from '@/components/canvas/CustomCanvas';
 import { CanvasScene } from '@/types/canvas';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function throttle(fn: (...args: any[]) => void, delay: number): (...args: any[]) => void {
   let last = 0;
@@ -75,16 +79,39 @@ export default function CanvasEditor() {
     }
   }, [note, noteId, navigate]);
 
+  // Backend sync debounce (longer than local throttle)
+  const backendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const saveScene = useRef(
     throttle((scene: CanvasScene) => {
       const id = noteIdRef.current;
       const update = updateNoteRef.current;
       if (!id || !update) return;
-      update(id, {
-        content: scene,
-      });
+
+      // Local save (immediate via throttle)
+      update(id, { content: scene });
+
+      // Backend save for online notes
+      const currentNote = useWorkspaceStore.getState().notes.find((n) => n.id === id);
+      const canSync = currentNote?.spaceType === 'online'
+        && useAuthStore.getState().isAuthenticated
+        && !useAuthStore.getState().isGuest
+        && UUID_REGEX.test(id);
+
+      if (canSync) {
+        if (backendTimerRef.current) clearTimeout(backendTimerRef.current);
+        backendTimerRef.current = setTimeout(() => {
+          updatePage(id, { content: scene }).catch(() => {});
+        }, 1500);
+      }
     }, 600)
   ).current;
+
+  useEffect(() => {
+    return () => {
+      if (backendTimerRef.current) clearTimeout(backendTimerRef.current);
+    };
+  }, [noteId]);
 
   const handleChange = useCallback(
     (scene: CanvasScene) => {

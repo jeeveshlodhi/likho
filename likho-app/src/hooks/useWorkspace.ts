@@ -20,10 +20,11 @@ import { useAuthStore } from '@/store/authStore';
 
 export function useWorkspace() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: ['workspace'],
     queryFn: fetchMyWorkspace,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isGuest,
     staleTime: 10 * 60 * 1000, // 10 min
   });
 }

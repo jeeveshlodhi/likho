@@ -108,6 +108,7 @@ def create_page(db: Session, data: PageCreate, workspace_id: UUID, user_id: UUID
         title=data.title,
         icon=data.icon,
         content=data.content,
+        page_type=data.page_type,
         is_folder=data.is_folder,
         sort_order=siblings_count,
         created_by=user_id,

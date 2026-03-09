@@ -101,6 +101,7 @@ class Page(Base):
     icon = Column(String(255), nullable=True)
     cover_url = Column(Text, nullable=True)
     content = Column(JSONB, nullable=True)  # BlockNote document JSON
+    page_type = Column(String(50), nullable=False, default="note")  # 'note', 'canvas', 'kanban'
 
     is_folder = Column(Boolean, default=False)
     is_template = Column(Boolean, default=False)
