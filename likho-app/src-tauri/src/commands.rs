@@ -314,19 +314,36 @@ pub async fn get_embedding_status(
     })
 }
 
-/// Load an LLM model with given configuration
+/// Download a GGUF model from HuggingFace and load it.
+/// Uses the hf-hub cache — subsequent calls for the same file are instant.
+#[tauri::command]
+pub async fn download_ai_model(
+    state: State<'_, AppState>,
+    config: Option<LlmConfig>,
+) -> Result<ModelInfo, String> {
+    let mut engine = state.llm_engine.write().await;
+    engine
+        .download_and_load(config)
+        .await
+        .map_err(|e| e.to_string())?;
+    engine
+        .model_info()
+        .cloned()
+        .ok_or_else(|| "Model loaded but no info available".to_string())
+}
+
+/// Load an LLM model from a local file path (kept for backward compat).
 #[tauri::command]
 pub async fn load_llm_model(
     state: State<'_, AppState>,
     config: LlmConfig,
 ) -> Result<ModelInfo, String> {
+    // Try to download/load from HuggingFace using the provided config
     let mut engine = state.llm_engine.write().await;
-
     engine
-        .load_model(config)
+        .download_and_load(Some(config))
         .await
         .map_err(|e| e.to_string())?;
-
     engine
         .model_info()
         .cloned()
@@ -372,6 +389,7 @@ pub async fn is_llm_model_loaded(state: State<'_, AppState>) -> Result<bool, Str
     let engine = state.llm_engine.read().await;
     Ok(engine.is_model_loaded())
 }
+
 
 // ─── AI Commands ────────────────────────────────────────────────────────────
 
@@ -507,9 +525,9 @@ pub async fn ai_complete_text(
     state: State<'_, AppState>,
     cursor_text: String,
 ) -> Result<String, String> {
-    let llm = state.llm_engine.read().await;
+    let mut llm = state.llm_engine.write().await;
     if !llm.is_model_loaded() {
-        return Err("No LLM model loaded. Load a local model to enable text completion.".to_string());
+        return Err(crate::llm::LlmError::ModelNotLoaded.to_string());
     }
     let prompt = format!("Continue the following text naturally. Output only the continuation:\n\n{}", cursor_text);
     llm.generate(&prompt).await.map_err(|e| e.to_string())
@@ -521,9 +539,9 @@ pub async fn ai_improve_text(
     state: State<'_, AppState>,
     text: String,
 ) -> Result<String, String> {
-    let llm = state.llm_engine.read().await;
+    let mut llm = state.llm_engine.write().await;
     if !llm.is_model_loaded() {
-        return Err("No LLM model loaded. Load a local model to enable text improvement.".to_string());
+        return Err(crate::llm::LlmError::ModelNotLoaded.to_string());
     }
     let prompt = format!("Improve the following text for clarity and readability. Keep the original meaning:\n\n{}", text);
     llm.generate(&prompt).await.map_err(|e| e.to_string())

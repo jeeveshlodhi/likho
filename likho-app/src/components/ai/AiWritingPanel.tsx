@@ -1,14 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SearchService } from '@/lib/search-service';
-import { useWorkspaceStore } from '@/store/workspaceStore';
-import { Sparkles, FileText, Wand2, Zap, Loader2, Check, X } from 'lucide-react';
+import { Sparkles, FileText, Wand2, Zap, Loader2, Check, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AiWritingPanelProps {
   noteId: string;
-  /** Current text selection or full note text for context */
   getSelectedText: () => string;
-  /** Called when a suggestion should replace/insert text */
   onApply: (text: string) => void;
   onTitleApply: (title: string) => void;
 }
@@ -20,7 +17,15 @@ export function AiWritingPanel({ noteId, getSelectedText, onApply, onTitleApply 
   const [activeAction, setActiveAction] = useState<Action | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const updateNote = useWorkspaceStore((s) => s.updateNote);
+  const [modelLoaded, setModelLoaded] = useState<boolean | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    SearchService.isLlmModelLoaded()
+      .then(setModelLoaded)
+      .catch(() => setModelLoaded(false));
+  }, []);
 
   const run = async (action: Action) => {
     setLoading(true);
@@ -53,11 +58,8 @@ export function AiWritingPanel({ noteId, getSelectedText, onApply, onTitleApply 
 
   const apply = () => {
     if (!result) return;
-    if (activeAction === 'title') {
-      onTitleApply(result);
-    } else {
-      onApply(result);
-    }
+    if (activeAction === 'title') onTitleApply(result);
+    else onApply(result);
     setResult(null);
     setActiveAction(null);
   };
@@ -68,11 +70,24 @@ export function AiWritingPanel({ noteId, getSelectedText, onApply, onTitleApply 
     setError(null);
   };
 
-  const tools: { action: Action; label: string; icon: React.ReactNode; desc: string }[] = [
-    { action: 'summarize', label: 'Summarize', icon: <FileText size={14} />, desc: 'Extract key points' },
-    { action: 'title', label: 'Suggest Title', icon: <Wand2 size={14} />, desc: 'Auto-title from content' },
-    { action: 'complete', label: 'Complete', icon: <Zap size={14} />, desc: 'Continue writing (LLM)' },
-    { action: 'improve', label: 'Improve', icon: <Sparkles size={14} />, desc: 'Refine selected text (LLM)' },
+  const downloadModel = async () => {
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      await SearchService.downloadAiModel();
+      setModelLoaded(true);
+    } catch (e: any) {
+      setDownloadError(e?.message ?? String(e));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const tools: { action: Action; label: string; icon: React.ReactNode; desc: string; needsLlm: boolean }[] = [
+    { action: 'summarize', label: 'Summarize', icon: <FileText size={14} />, desc: 'Extract key points', needsLlm: false },
+    { action: 'title', label: 'Suggest Title', icon: <Wand2 size={14} />, desc: 'Auto-title from content', needsLlm: false },
+    { action: 'complete', label: 'Complete', icon: <Zap size={14} />, desc: 'Continue writing', needsLlm: true },
+    { action: 'improve', label: 'Improve', icon: <Sparkles size={14} />, desc: 'Refine selected text', needsLlm: true },
   ];
 
   return (
@@ -82,31 +97,73 @@ export function AiWritingPanel({ noteId, getSelectedText, onApply, onTitleApply 
         AI Writing Tools
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
-        {tools.map(({ action, label, icon, desc }) => (
-          <button
-            key={action}
-            onClick={() => run(action)}
-            disabled={loading}
-            title={desc}
-            className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-left transition-colors
-              ${activeAction === action && loading
-                ? 'bg-primary/10 text-primary'
-                : 'hover:bg-accent text-foreground'
-              }`}
+      {/* Download CTA when no model loaded */}
+      {modelLoaded === false && (
+        <div className="rounded-md border border-border bg-muted/30 p-2.5 space-y-2">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-medium text-foreground">Summarize & Suggest Title</span> work now.{' '}
+            <span className="font-medium text-foreground">Complete & Improve</span> need a local AI model.
+          </p>
+          {downloadError && (
+            <p className="text-xs text-destructive">{downloadError}</p>
+          )}
+          <Button
+            size="sm"
+            className="h-7 text-xs w-full gap-1.5"
+            onClick={downloadModel}
+            disabled={downloading}
           >
-            {activeAction === action && loading
-              ? <Loader2 size={12} className="animate-spin shrink-0" />
-              : <span className="shrink-0">{icon}</span>
+            {downloading
+              ? <><Loader2 size={12} className="animate-spin" /> Downloading TinyLlama…</>
+              : <><Download size={12} /> Download AI Model (~637 MB)</>
             }
-            {label}
-          </button>
-        ))}
+          </Button>
+          {downloading && (
+            <p className="text-xs text-muted-foreground text-center">
+              Downloading via HuggingFace. Cached after first download.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-1.5">
+        {tools.map(({ action, label, icon, desc, needsLlm }) => {
+          const isDisabled = loading || (needsLlm && !modelLoaded);
+          return (
+            <button
+              key={action}
+              onClick={() => run(action)}
+              disabled={isDisabled}
+              title={needsLlm && !modelLoaded ? 'Requires AI model — download above' : desc}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-left transition-colors
+                ${activeAction === action && loading
+                  ? 'bg-primary/10 text-primary'
+                  : isDisabled
+                  ? 'opacity-40 cursor-not-allowed text-muted-foreground'
+                  : 'hover:bg-accent text-foreground'
+                }`}
+            >
+              {activeAction === action && loading
+                ? <Loader2 size={12} className="animate-spin shrink-0" />
+                : <span className="shrink-0">{icon}</span>
+              }
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {error && (
-        <div className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-          {error}
+        <div className="rounded-md bg-destructive/10 p-2 space-y-1.5 text-xs text-destructive">
+          <p>{error}</p>
+          {!modelLoaded && !downloading && (
+            <button
+              onClick={downloadModel}
+              className="flex items-center gap-1 text-primary hover:underline"
+            >
+              <Download size={11} /> Download AI Model
+            </button>
+          )}
         </div>
       )}
 

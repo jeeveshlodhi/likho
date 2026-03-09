@@ -92,15 +92,15 @@ const insertAIBlock = (editor: typeof schema.BlockNoteEditor) => ({
   onItemClick: () => {
     const currentBlock = editor.getTextCursorPosition().block;
     editor.insertBlocks(
-      [{ type: "askAi", props: { response: "I am thinking..." } }],
+      [{ type: "askAi", props: { query: "", response: "", status: "idle" } }],
       currentBlock,
       "after"
     );
   },
-  aliases: ["ai", "ask"],
+  aliases: ["ai", "ask", "?"],
   group: "AI",
   icon: <Sparkles size={18} />,
-  subtext: "Connect to your AI assistant.",
+  subtext: "Ask a question answered from your notes",
 });
 
 // Insert wikilink command

@@ -69,12 +69,12 @@ impl RagPipeline {
         }
         
         // Step 3: Generate response using LLM
-        let llm = self.llm_engine.read().await;
+        let mut llm = self.llm_engine.write().await;
         let answer = if llm.is_model_loaded() {
-            let prompt = build_rag_prompt(&search_results[..top_k.min(search_results.len())], 
+            let prompt = build_rag_prompt(&search_results[..top_k.min(search_results.len())],
                 user_query
             );
-            
+
             llm.generate(&prompt)
                 .await
                 .map_err(|e| RagError::LlmError(e.to_string()))?

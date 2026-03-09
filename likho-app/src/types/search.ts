@@ -85,14 +85,13 @@ export interface RagQuery {
 // LLM Model Management Types
 
 export interface LlmConfig {
-  model_path: string;
-  context_size: number;
-  threads: number;
+  model_repo: string;
+  model_file: string;
   temperature: number;
   max_tokens: number;
-  gpu_layers: number;
-  use_mmap: boolean;
-  use_mlock: boolean;
+  /** 0 = CPU only; 99 = all layers on GPU (Metal/CUDA) */
+  n_gpu_layers: number;
+  context_size: number;
 }
 
 export interface ModelInfo {
@@ -126,14 +125,12 @@ export interface TopicGroup {
 }
 
 export const DEFAULT_LLM_CONFIG: LlmConfig = {
-  model_path: "models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
-  context_size: 2048,
-  threads: 4,
+  model_repo: "bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF",
+  model_file: "TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf",
   temperature: 0.7,
   max_tokens: 512,
-  gpu_layers: -1,
-  use_mmap: true,
-  use_mlock: false,
+  n_gpu_layers: 0,
+  context_size: 2048,
 };
 
 // Recommended models that can be downloaded

@@ -284,6 +284,18 @@ export class SearchService {
     return invoke<TopicGroup[]>("ai_group_notes_by_topic");
   }
 
+  /**
+   * Download a GGUF model from HuggingFace and load it with llama.cpp.
+   * Uses hf-hub cache — re-calling after download is instant.
+   */
+  static async downloadAiModel(config?: LlmConfig): Promise<ModelInfo> {
+    try {
+      return await invoke<ModelInfo>("download_ai_model", { config: config ?? null });
+    } catch (error) {
+      throw new Error(`Failed to download AI model: ${error}`);
+    }
+  }
+
   static async aiCompleteText(cursorText: string): Promise<string> {
     return invoke<string>("ai_complete_text", { cursorText });
   }

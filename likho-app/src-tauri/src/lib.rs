@@ -104,6 +104,7 @@ pub fn run() {
             commands::ai_group_notes_by_topic,
             commands::ai_complete_text,
             commands::ai_improve_text,
+            commands::download_ai_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
