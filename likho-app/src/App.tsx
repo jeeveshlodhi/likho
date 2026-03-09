@@ -10,6 +10,10 @@ import FolderIndex from "@/pages/dashboard/FolderIndex";
 import PageEditor from "@/pages/dashboard/PageEditor";
 import SettingsPage from "@/pages/settings";
 import SharedPageView from "@/pages/SharedPageView";
+import LinkManager from "@/pages/dashboard/LinkManager";
+import TagManager from "@/pages/dashboard/TagManager";
+import GraphView from "@/pages/dashboard/GraphView";
+import TagView from "@/pages/dashboard/TagView";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
 import { isTauri } from "@/utils/platform";
@@ -42,6 +46,10 @@ function App() {
         <Route path="note/:noteId" element={<PageEditor />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:section" element={<SettingsPage />} />
+        <Route path="links" element={<LinkManager />} />
+        <Route path="tags" element={<TagManager />} />
+        <Route path="tag/:tagName" element={<TagView />} />
+        <Route path="graph" element={<GraphView />} />
       </Route>
     </Routes>
   );

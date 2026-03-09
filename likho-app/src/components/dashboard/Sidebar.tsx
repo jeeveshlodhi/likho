@@ -1,4 +1,5 @@
-import { Search, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Search, PanelLeftClose, PanelLeft, Link2, Hash, Share2 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import SpaceSection from './SpaceSection';
@@ -9,6 +10,7 @@ export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
   const { isAuthenticated, isGuest } = useAuthStore();
   const showOnlineSpace = isAuthenticated && !isGuest;
+  const navigate = useNavigate();
 
   if (sidebarCollapsed) {
     return (
@@ -61,6 +63,34 @@ export default function Sidebar() {
           </>
         )}
         {isTauri() && <SpaceSection spaceType="offline" />}
+
+        {/* Knowledge Graph Navigation */}
+        <div className="mt-4 border-t border-sidebar-border pt-3">
+          <div className="mb-2 px-2 text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+            Knowledge Graph
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/graph')}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+          >
+            <Share2 size={16} />
+            Graph View
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/tags')}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+          >
+            <Hash size={16} />
+            Tags
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/links')}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+          >
+            <Link2 size={16} />
+            Links
+          </button>
+        </div>
       </div>
 
       {/* Footer */}
