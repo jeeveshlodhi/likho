@@ -98,6 +98,12 @@ pub fn run() {
             commands::unload_llm_model,
             commands::get_llm_config,
             commands::is_llm_model_loaded,
+            commands::ai_find_related_notes,
+            commands::ai_suggest_title,
+            commands::ai_summarize_note,
+            commands::ai_group_notes_by_topic,
+            commands::ai_complete_text,
+            commands::ai_improve_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

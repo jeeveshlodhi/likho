@@ -12,6 +12,8 @@ import {
   LlmConfig,
   ModelInfo,
   Note,
+  RelatedNote,
+  TopicGroup,
 } from "../types/search";
 
 export class SearchService {
@@ -262,6 +264,32 @@ export class SearchService {
       console.error("Check LLM model loaded error:", error);
       throw new Error(`Failed to check LLM model status: ${error}`);
     }
+  }
+
+  // ─── AI methods ──────────────────────────────────────────────────────────
+
+  static async aiFindRelatedNotes(noteId: string, limit = 5): Promise<RelatedNote[]> {
+    return invoke<RelatedNote[]>("ai_find_related_notes", { noteId, limit });
+  }
+
+  static async aiSuggestTitle(noteId: string): Promise<string> {
+    return invoke<string>("ai_suggest_title", { noteId });
+  }
+
+  static async aiSummarizeNote(noteId: string): Promise<string> {
+    return invoke<string>("ai_summarize_note", { noteId });
+  }
+
+  static async aiGroupNotesByTopic(): Promise<TopicGroup[]> {
+    return invoke<TopicGroup[]>("ai_group_notes_by_topic");
+  }
+
+  static async aiCompleteText(cursorText: string): Promise<string> {
+    return invoke<string>("ai_complete_text", { cursorText });
+  }
+
+  static async aiImproveText(text: string): Promise<string> {
+    return invoke<string>("ai_improve_text", { text });
   }
 }
 

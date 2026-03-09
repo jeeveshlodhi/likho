@@ -111,6 +111,20 @@ export interface ModelDownloadRequest {
   description?: string;
 }
 
+export interface RelatedNote {
+  note_id: string;
+  note_title: string;
+  similarity: number;
+}
+
+export interface TopicGroup {
+  topic_name: string;
+  suggested_folder: string;
+  note_ids: string[];
+  note_titles: string[];
+  similarity_score: number;
+}
+
 export const DEFAULT_LLM_CONFIG: LlmConfig = {
   model_path: "models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
   context_size: 2048,

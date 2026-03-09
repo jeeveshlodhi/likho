@@ -79,3 +79,21 @@ pub struct UpdateNoteRequest {
     pub content: Option<String>,
     pub folder_id: Option<String>,
 }
+
+/// A note semantically related to a source note (embedding-based)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelatedNote {
+    pub note_id: String,
+    pub note_title: String,
+    pub similarity: f64,
+}
+
+/// A cluster of thematically similar notes (for auto-grouping)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopicGroup {
+    pub topic_name: String,
+    pub suggested_folder: String,
+    pub note_ids: Vec<String>,
+    pub note_titles: Vec<String>,
+    pub similarity_score: f64,
+}

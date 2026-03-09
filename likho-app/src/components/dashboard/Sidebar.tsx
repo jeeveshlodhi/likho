@@ -6,6 +6,7 @@ import SpaceSection from './SpaceSection';
 import SidebarFooter from './SidebarFooter';
 import { isTauri } from '@/utils/platform';
 import { SidebarSearch } from '@/components/search';
+import { AutoGroupButton } from '@/components/ai';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
@@ -89,6 +90,7 @@ export default function Sidebar() {
             <Link2 size={16} />
             Links
           </button>
+          <AutoGroupButton />
         </div>
       </div>
 

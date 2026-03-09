@@ -419,12 +419,13 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         let mut stmt = conn.prepare(
-            "SELECT c.id, f.rank
-             FROM fts_chunks f
-             JOIN chunks c ON c.rowid = f.rowid
-             WHERE f MATCH ?1
-             AND c.folder_path LIKE ?2 || '%'
-             ORDER BY f.rank
+            "SELECT c.id, fts.rank
+             FROM chunks c
+             INNER JOIN (
+                 SELECT rowid, rank FROM fts_chunks WHERE fts_chunks MATCH ?1
+             ) AS fts ON c.rowid = fts.rowid
+             WHERE c.folder_path LIKE ?2 || '%'
+             ORDER BY fts.rank
              LIMIT ?3",
         )?;
 
@@ -548,6 +549,29 @@ impl Database {
         } else {
             Ok(results)
         }
+    }
+
+    /// Get all chunks that have embeddings, for AI grouping
+    pub fn get_all_chunks_with_embeddings(&self) -> Result<Vec<(String, String, Vec<f32>)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, note_id, embedding FROM chunks WHERE embedding IS NOT NULL",
+        )?;
+
+        let chunks = stmt
+            .query_map([], |row| {
+                let id: String = row.get(0)?;
+                let note_id: String = row.get(1)?;
+                let blob: Vec<u8> = row.get(2)?;
+                let embedding: Vec<f32> = blob
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                    .collect();
+                Ok((id, note_id, embedding))
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(chunks)
     }
 }
 
