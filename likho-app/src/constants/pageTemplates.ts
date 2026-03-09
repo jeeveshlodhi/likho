@@ -1,6 +1,6 @@
 import type { PageType } from '@/types/workspace';
 import type { LucideIcon } from 'lucide-react';
-import { FileText, Layout } from 'lucide-react';
+import { FileText, Layout, KanbanSquare } from 'lucide-react';
 
 export interface PageTemplate {
   id: PageType;
@@ -22,5 +22,11 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     label: 'Canvas',
     description: 'Whiteboard for brainstorming, diagrams, and sticky notes.',
     icon: Layout,
+  },
+  {
+    id: 'kanban',
+    label: 'Kanban Board',
+    description: 'Pre-configured whiteboard with To Do, In Progress, and Done columns.',
+    icon: KanbanSquare,
   },
 ];

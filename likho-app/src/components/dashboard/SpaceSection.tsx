@@ -59,8 +59,22 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
 
   const handleNewPageSelect = useCallback(
     async (resolvedSpaceType: SpaceType, templateId: PageType) => {
+      // 1. Canvas Handling
       if (templateId === 'canvas') {
         const note = createCanvas(null, resolvedSpaceType);
+        setActiveNote(note.id);
+        navigate(`/dashboard/note/${note.id}`);
+        return;
+      }
+
+      // 2. Kanban Handling
+      if (templateId === 'kanban') {
+        // Create it as a normal note but explicitly set type to kanban
+        const note = createNote(null, resolvedSpaceType);
+        note.pageType = 'kanban';
+        // Force the creation of the base board structure instead of leaving it empty
+        note.content = { columns: [], cards: {} };
+        // Replace in store immediately (we cheat slightly by mutating since createNote returns the reference temporarily)
         setActiveNote(note.id);
         navigate(`/dashboard/note/${note.id}`);
         return;
@@ -228,11 +242,10 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
             onDragOver={handleRootDragOver}
             onDragLeave={handleRootDragLeave}
             onDrop={handleRootDrop}
-            className={`mb-0.5 rounded-md border border-dashed px-2 py-1.5 text-center text-xs transition-colors ${
-              rootZoneDragOver
-                ? 'border-primary/50 bg-primary/10 text-primary'
-                : 'border-transparent text-muted-foreground'
-            }`}
+            className={`mb-0.5 rounded-md border border-dashed px-2 py-1.5 text-center text-xs transition-colors ${rootZoneDragOver
+              ? 'border-primary/50 bg-primary/10 text-primary'
+              : 'border-transparent text-muted-foreground'
+              }`}
           >
             {rootZoneDragOver ? 'Drop to move out of folder' : 'No folder'}
           </div>

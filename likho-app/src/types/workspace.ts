@@ -1,7 +1,7 @@
 export type SpaceType = 'online' | 'offline';
 
-/** Page type: note = BlockNote doc, canvas = Excalidraw whiteboard */
-export type PageType = 'note' | 'canvas';
+/** Page type: note = BlockNote doc, canvas = Custom Canvas */
+export type PageType = 'note' | 'canvas' | 'kanban';
 
 export interface Folder {
   id: string;
@@ -15,16 +15,49 @@ export interface Folder {
   updatedAt: string;
 }
 
+export type KanbanPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export interface KanbanLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface KanbanCard {
+  id: string;
+  content: string;
+  description?: string;
+  priority?: KanbanPriority;
+  labels?: string[]; // label IDs
+  dueDate?: string;  // ISO date string
+  createdAt?: string;
+}
+
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  cardIds: string[];
+  color?: string;     // accent color hex
+  wipLimit?: number;
+}
+
+export interface KanbanBoardData {
+  columns: string[];
+  columnData: Record<string, KanbanColumn>;
+  cardData: Record<string, KanbanCard>;
+  labels?: KanbanLabel[]; // board-level label definitions
+}
+
 export interface Note {
   id: string;
   title: string;
-  content: any; // BlockNote doc (note) or { document?, session? } (canvas)
+  content?: any | KanbanBoardData; // BlockNote content, CanvasScene, or KanbanBoardData
   folderId: string | null;
   spaceType: SpaceType;
-  pageType?: PageType; // default 'note'
   icon: string | null;
   coverImage?: string;
   sortOrder: number;
+  pageType?: PageType;
   createdAt: string;
   updatedAt: string;
 }

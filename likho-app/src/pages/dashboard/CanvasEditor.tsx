@@ -1,21 +1,16 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Excalidraw } from '@excalidraw/excalidraw';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import { useTheme } from '@/providers/ThemeProvider';
+import CustomCanvas from '@/components/canvas/CustomCanvas';
+import { CanvasScene } from '@/types/canvas';
 
-/** Persisted canvas content: elements + appState from Excalidraw (JSON-serializable). */
-export interface ExcalidrawScene {
-  elements?: unknown[];
-  appState?: unknown;
-}
-
-function throttle(fn: (...args: unknown[]) => void, delay: number): (...args: unknown[]) => void {
+function throttle(fn: (...args: any[]) => void, delay: number): (...args: any[]) => void {
   let last = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  return (...args: unknown[]) => {
+  return (...args: any[]) => {
     const now = Date.now();
     if (timer) clearTimeout(timer);
     if (now - last >= delay) {
@@ -38,6 +33,7 @@ export default function CanvasEditor() {
   const setActiveNote = useWorkspaceStore((s) => s.setActiveNote);
   const updateNote = useWorkspaceStore((s) => s.updateNote);
   const { theme } = useTheme();
+
   const noteIdRef = useRef(noteId ?? null);
   const updateNoteRef = useRef(updateNote);
   noteIdRef.current = noteId ?? null;
@@ -45,28 +41,28 @@ export default function CanvasEditor() {
 
   const note = notes.find((n) => n.id === noteId);
 
-  // Initial scene only when opening this note — never from our own saves (would reload canvas).
-  const [initialData, setInitialData] = useState<ExcalidrawScene | null>(null);
+  // Initial scene data from persistence
+  const [initialData, setInitialData] = useState<CanvasScene | null>(null);
   const lastNoteIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!noteId || !note) return;
     if (lastNoteIdRef.current === noteId) return;
     lastNoteIdRef.current = noteId;
+
     const raw = note.content;
-    if (!raw || typeof raw !== 'object') {
-      setInitialData(null);
+    if (!raw || typeof raw !== 'object' || (!raw.elements && !raw.camera)) {
+      setInitialData({
+        elements: [],
+        camera: { x: 0, y: 0, zoom: 1 }
+      });
       return;
     }
-    const content = raw as ExcalidrawScene;
-    if (content.elements || content.appState) {
-      setInitialData({
-        elements: content.elements ?? [],
-        appState: content.appState ?? undefined,
-      });
-    } else {
-      setInitialData(null);
-    }
+
+    setInitialData({
+      elements: Array.isArray(raw.elements) ? raw.elements : [],
+      camera: raw.camera || { x: 0, y: 0, zoom: 1 },
+    });
   }, [noteId, note]);
 
   useEffect(() => {
@@ -80,50 +76,55 @@ export default function CanvasEditor() {
   }, [note, noteId, navigate]);
 
   const saveScene = useRef(
-    throttle((...args: unknown[]) => {
-      const [elements, appState] = args;
+    throttle((scene: CanvasScene) => {
       const id = noteIdRef.current;
       const update = updateNoteRef.current;
       if (!id || !update) return;
       update(id, {
-        content: {
-          elements: Array.isArray(elements) ? [...elements] : [],
-          appState: appState && typeof appState === 'object' ? { ...(appState as object) } : {},
-        },
+        content: scene,
       });
     }, 600)
   ).current;
 
   const handleChange = useCallback(
-    (elements: unknown, appState: unknown) => {
-      saveScene(
-        Array.isArray(elements) ? elements : [],
-        appState && typeof appState === 'object' ? appState : {}
-      );
+    (scene: CanvasScene) => {
+      saveScene(scene);
     },
     [saveScene]
   );
 
   const resolvedTheme =
     theme === 'dark' ||
-    (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
       ? 'dark'
       : 'light';
 
   if (!note) return null;
+  // Wait until we parsed initialData so we don't start empty by accident
+  if (!initialData && lastNoteIdRef.current !== noteId) return null;
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2">
-        <Breadcrumb note={note} />
-        <NoteTitleInput note={note} />
+      {/* Top Bar matching NoteEditor */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-2">
+        <div className="flex items-center gap-3">
+          <Breadcrumb note={note} />
+        </div>
       </div>
-      <div className="relative flex-1 min-h-0">
-        <Excalidraw
-          initialData={initialData as React.ComponentProps<typeof Excalidraw>['initialData']}
-          onChange={handleChange}
-          theme={resolvedTheme}
-        />
+
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {/* Title overlay or sticky header inside the canvas space */}
+        <div className="absolute top-4 left-6 z-10 w-64 bg-background/80 backdrop-blur-sm rounded-md shadow-sm border border-border p-1">
+          <NoteTitleInput note={note} />
+        </div>
+
+        {initialData && (
+          <CustomCanvas
+            initialData={initialData}
+            onChange={handleChange}
+            theme={resolvedTheme}
+          />
+        )}
       </div>
     </div>
   );
