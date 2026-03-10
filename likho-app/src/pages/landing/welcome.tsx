@@ -1,3 +1,5 @@
+import { isTauri } from '@/utils/platform';
+import TauriWelcome from '@/components/landing/TauriWelcome';
 import Navbar from '@/components/landing/Navbar';
 import Hero from '@/components/landing/Hero';
 import Problem from '@/components/landing/Problem';
@@ -12,6 +14,16 @@ import FinalCTA from '@/components/landing/FinalCTA';
 import Footer from '@/components/landing/Footer';
 
 const Welcome = () => {
+  // Tauri (desktop app) gets a simple, focused welcome screen
+  if (isTauri()) {
+    return (
+      <div className="h-full overflow-hidden bg-background">
+        <TauriWelcome />
+      </div>
+    );
+  }
+
+  // Browser gets the full landing page with all sections
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden bg-background scroll-smooth">
       <Navbar />
