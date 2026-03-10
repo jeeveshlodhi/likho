@@ -92,6 +92,8 @@ export interface LlmConfig {
   /** 0 = CPU only; 99 = all layers on GPU (Metal/CUDA) */
   n_gpu_layers: number;
   context_size: number;
+  /** Number of CPU threads to use for inference */
+  threads: number;
 }
 
 export interface ModelInfo {
@@ -131,6 +133,7 @@ export const DEFAULT_LLM_CONFIG: LlmConfig = {
   max_tokens: 512,
   n_gpu_layers: 0,
   context_size: 2048,
+  threads: 4,
 };
 
 // Recommended models that can be downloaded

@@ -38,10 +38,12 @@ export const LlmSettingsDialog: React.FC<LlmSettingsDialogProps> = ({
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [localConfig, setLocalConfig] = useState<LlmConfig>(DEFAULT_LLM_CONFIG);
 
-  // Update local config when fetched config changes
+  // Update local config when fetched config changes.
+  // Merge with DEFAULT_LLM_CONFIG so any missing fields (e.g. threads) are
+  // filled in rather than left undefined, which would crash .toString() calls.
   React.useEffect(() => {
     if (config) {
-      setLocalConfig(config);
+      setLocalConfig({ ...DEFAULT_LLM_CONFIG, ...config });
     }
   }, [config]);
 

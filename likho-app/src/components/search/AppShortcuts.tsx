@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 import { SearchDialog } from "@/components/search/SearchDialog";

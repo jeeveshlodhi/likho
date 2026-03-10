@@ -9,11 +9,13 @@ interface SearchResultItemProps {
     noteTitle: string;
     folderPath: string;
   }) => void;
+  isSelected?: boolean;
 }
 
 export const SearchResultItem: React.FC<SearchResultItemProps> = ({
   result,
   onClick,
+  isSelected = false,
 }) => {
   const handleClick = () => {
     onClick?.({
@@ -24,64 +26,94 @@ export const SearchResultItem: React.FC<SearchResultItemProps> = ({
   };
 
   // Truncate text for display
-  const displayText = result.text.length > 150
-    ? result.text.substring(0, 150) + "..."
+  const displayText = result.text.length > 120
+    ? result.text.substring(0, 120) + "..."
     : result.text;
 
   return (
     <button
       onClick={handleClick}
-      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+      className={`w-full px-5 py-3.5 text-left transition-all duration-150 
+        border-b border-zinc-100 dark:border-zinc-800/50 last:border-0
+        ${isSelected 
+          ? "bg-indigo-50/80 dark:bg-indigo-500/10" 
+          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+        }`}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-1 flex-shrink-0">
-          <FileText className="h-4 w-4 text-blue-500" />
+        <div className={`mt-0.5 flex-shrink-0 flex h-9 w-9 items-center justify-center 
+          rounded-lg transition-colors duration-150
+          ${isSelected 
+            ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" 
+            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+          }`}>
+          <FileText className="h-4 w-4" />
         </div>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-gray-900 truncate">
+            <span className={`font-semibold text-sm truncate 
+              ${isSelected 
+                ? "text-indigo-900 dark:text-indigo-300" 
+                : "text-zinc-900 dark:text-zinc-100"
+              }`}>
               {result.note_title}
             </span>
-            <span className="text-xs text-gray-400">
-              Chunk {result.chunk_index + 1}
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full 
+              bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+              #{result.chunk_index + 1}
             </span>
           </div>
           
-          <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
-            <Folder className="h-3 w-3" />
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-1.5">
+            <Folder className="h-3 w-3 flex-shrink-0" />
             <span className="truncate">{result.folder_path}</span>
           </div>
           
-          <p className="text-sm text-gray-600 line-clamp-2">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
             {displayText}
           </p>
           
           {/* Score indicators */}
-          <div className="flex items-center gap-3 mt-2 text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Vector:</span>
-              <span className={`font-medium ${
-                result.vector_score > 0.7 ? "text-green-600" : "text-gray-600"
-              }`}>
-                {(result.vector_score * 100).toFixed(0)}%
-              </span>
+          <div className="flex items-center gap-4 mt-2.5 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-400">Vector</span>
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${
+                      result.vector_score > 0.7 
+                        ? "bg-green-500" 
+                        : result.vector_score > 0.4 
+                          ? "bg-yellow-500" 
+                          : "bg-zinc-400"
+                    }`}
+                    style={{ width: `${result.vector_score * 100}%` }}
+                  />
+                </div>
+                <span className={`font-medium ${
+                  result.vector_score > 0.7 
+                    ? "text-green-600 dark:text-green-400" 
+                    : "text-zinc-600 dark:text-zinc-400"
+                }`}>
+                  {(result.vector_score * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
             
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Keyword:</span>
-              <span className={`font-medium ${
-                result.keyword_score > 0.7 ? "text-green-600" : "text-gray-600"
-              }`}>
-                {(result.keyword_score * 100).toFixed(0)}%
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Hybrid:</span>
-              <span className="font-medium text-blue-600">
-                {(result.hybrid_score * 100).toFixed(1)}%
-              </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-400">Hybrid</span>
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-indigo-500"
+                    style={{ width: `${result.hybrid_score * 100}%` }}
+                  />
+                </div>
+                <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                  {(result.hybrid_score * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
