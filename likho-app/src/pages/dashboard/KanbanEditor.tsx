@@ -7,6 +7,7 @@ import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import { KanbanBoardData } from '@/types/workspace';
 import KanbanBoard from '@/components/kanban/KanbanBoard';
 import KanbanFilterBar, { KanbanFilter, EMPTY_FILTER } from '@/components/kanban/KanbanFilterBar';
+import { RightSidebar } from '@/components/ai';
 
 export default function KanbanEditor() {
     const { noteId } = useParams<{ noteId: string }>();
@@ -65,23 +66,34 @@ export default function KanbanEditor() {
                 </div>
             </div>
 
-            <div className="relative flex-1 min-h-0 flex flex-col">
-                {/* Title + Filter bar */}
-                <div className="shrink-0 px-6 pt-4 pb-3 space-y-3">
-                    <div className="w-64">
-                        <NoteTitleInput note={note} />
+            <div className="flex flex-1 min-h-0 overflow-hidden">
+                {/* Main board area */}
+                <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+                    {/* Title + Filter bar */}
+                    <div className="shrink-0 px-6 pt-4 pb-3 space-y-3">
+                        <div className="w-64">
+                            <NoteTitleInput note={note} />
+                        </div>
+                        <KanbanFilterBar
+                            filter={filter}
+                            onChange={setFilter}
+                            labels={boardLabels}
+                        />
                     </div>
-                    <KanbanFilterBar
-                        filter={filter}
-                        onChange={setFilter}
-                        labels={boardLabels}
-                    />
+
+                    {/* Board Area */}
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
+                        <KanbanBoard data={boardData} onChange={handleBoardChange} filter={filter} />
+                    </div>
                 </div>
 
-                {/* Board Area */}
-                <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
-                    <KanbanBoard data={boardData} onChange={handleBoardChange} filter={filter} />
-                </div>
+                {/* Right Sidebar */}
+                <RightSidebar
+                    note={note}
+                    contentText={note.title}
+                    getSelectedText={() => ''}
+                    onApplyText={() => {}}
+                />
             </div>
         </div>
     );

@@ -10,6 +10,9 @@ from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
 from app.modules.workspaces.router import workspace_router, pages_router
 from app.modules.sharing.router import router as sharing_router
+from app.modules.ai.router import router as ai_router
+from app.modules.temp_notes.router import router as temp_notes_router
+from app.modules.temp_notes import models as _temp_notes_models  # noqa: F401 — register model
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -32,6 +35,8 @@ app.include_router(users_router, prefix=f"{settings.API_V1_STR}/users", tags=["u
 app.include_router(workspace_router, prefix=f"{settings.API_V1_STR}/workspaces", tags=["workspaces"])
 app.include_router(pages_router, prefix=f"{settings.API_V1_STR}/pages", tags=["pages"])
 app.include_router(sharing_router, prefix=f"{settings.API_V1_STR}", tags=["sharing"])
+app.include_router(ai_router, prefix=f"{settings.API_V1_STR}/ai", tags=["ai"])
+app.include_router(temp_notes_router, prefix=f"{settings.API_V1_STR}/temp-notes", tags=["temp-notes"])
 
 
 @app.get("/")

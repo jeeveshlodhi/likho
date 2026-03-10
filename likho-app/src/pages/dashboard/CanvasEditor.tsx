@@ -8,6 +8,7 @@ import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import { useTheme } from '@/providers/ThemeProvider';
 import CustomCanvas from '@/components/canvas/CustomCanvas';
 import { CanvasScene } from '@/types/canvas';
+import { RightSidebar } from '@/components/ai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -132,26 +133,35 @@ export default function CanvasEditor() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Top Bar matching NoteEditor */}
+      {/* Top Bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-2">
         <div className="flex items-center gap-3">
           <Breadcrumb note={note} />
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-0 flex flex-col">
-        {/* Title overlay or sticky header inside the canvas space */}
-        <div className="absolute top-4 left-6 z-10 w-64 bg-background/80 backdrop-blur-sm rounded-md shadow-sm border border-border p-1">
-          <NoteTitleInput note={note} />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Canvas area */}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div className="absolute top-4 left-6 z-10 w-64 bg-background/80 backdrop-blur-sm rounded-md shadow-sm border border-border p-1">
+            <NoteTitleInput note={note} />
+          </div>
+          {initialData && (
+            <CustomCanvas
+              initialData={initialData}
+              onChange={handleChange}
+              theme={resolvedTheme}
+            />
+          )}
         </div>
 
-        {initialData && (
-          <CustomCanvas
-            initialData={initialData}
-            onChange={handleChange}
-            theme={resolvedTheme}
-          />
-        )}
+        {/* Right Sidebar */}
+        <RightSidebar
+          note={note}
+          contentText={note.title}
+          getSelectedText={() => ''}
+          onApplyText={() => {}}
+        />
       </div>
     </div>
   );

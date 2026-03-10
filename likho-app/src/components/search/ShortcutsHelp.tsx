@@ -24,6 +24,7 @@ const SHORTCUTS: Shortcut[] = [
   // AI
   { keys: ["Cmd", "Shift", "A"], description: "Open AI Chat", category: "AI" },
   { keys: ["Cmd", "Shift", "L"], description: "AI Model Settings", category: "AI" },
+  { keys: ["Cmd", "Shift", "N"], description: "Quick capture temp note", category: "AI" },
 ];
 
 export function ShortcutsHelp() {

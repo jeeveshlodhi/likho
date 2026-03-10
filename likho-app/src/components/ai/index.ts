@@ -1,3 +1,9 @@
 export { RelatedNotesPanel } from './RelatedNotesPanel';
 export { AiWritingPanel } from './AiWritingPanel';
 export { AutoGroupButton } from './AutoGroupButton';
+export { RightSidebar } from './RightSidebar';
+export { CloudWritingAssist } from './CloudWritingAssist';
+export { AutoTagPanel } from './AutoTagPanel';
+export { MeetingInsightsPanel } from './MeetingInsightsPanel';
+export { SuggestLinksPanel } from './SuggestLinksPanel';
+export { JournalInsightsPanel } from './JournalInsightsPanel';

@@ -14,9 +14,14 @@ import LinkManager from "@/pages/dashboard/LinkManager";
 import TagManager from "@/pages/dashboard/TagManager";
 import GraphView from "@/pages/dashboard/GraphView";
 import TagView from "@/pages/dashboard/TagView";
+import TempNotesDashboard from "@/pages/dashboard/TempNotesDashboard";
+import { WorkspaceHealth } from "@/pages/dashboard/WorkspaceHealth";
+import { WorkspaceRagChat } from "@/pages/dashboard/WorkspaceRagChat";
+import { WorkspaceDigest } from "@/pages/dashboard/WorkspaceDigest";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
 import { isTauri } from "@/utils/platform";
+import { TempNoteQuickCapture } from "@/components/dashboard/TempNoteQuickCapture";
 
 function App() {
   // Sync check + re-check after mount in case Tauri injects __TAURI__ after first paint
@@ -50,6 +55,10 @@ function App() {
         <Route path="tags" element={<TagManager />} />
         <Route path="tag/:tagName" element={<TagView />} />
         <Route path="graph" element={<GraphView />} />
+        <Route path="temp-notes" element={<TempNotesDashboard />} />
+        <Route path="workspace-health" element={<WorkspaceHealth />} />
+        <Route path="ai-chat" element={<WorkspaceRagChat />} />
+        <Route path="digest" element={<WorkspaceDigest />} />
       </Route>
     </Routes>
   );
@@ -61,6 +70,7 @@ function App() {
         <div className="flex-1 min-h-0 overflow-hidden">
           {routes}
         </div>
+        <TempNoteQuickCapture />
       </div>
     );
   }
@@ -69,6 +79,7 @@ function App() {
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-background">
       {routes}
+      <TempNoteQuickCapture />
     </div>
   );
 }

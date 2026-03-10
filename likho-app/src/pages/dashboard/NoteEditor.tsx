@@ -50,13 +50,12 @@ import {
   SuggestionMenuController,
 } from "@blocknote/react";
 import '@blocknote/shadcn/style.css';
-import { Sparkles, Share2, Link2, Hash, PanelRight, PanelRightClose, Network, Wand2 } from 'lucide-react';
+import { Sparkles, Share2, Hash, Link2 } from 'lucide-react';
 import { AskAIBlock } from '@/components/dashboard/editor/AskAIBlock';
 import { WikilinkBlock } from '@/components/dashboard/editor/WikilinkBlock';
 import { TagBlock } from '@/components/dashboard/editor/TagBlock';
 import { LinkSuggestionMenu } from '@/components/dashboard/editor/LinkSuggestionMenu';
-import { BacklinksPanel } from '@/components/dashboard/editor/BacklinksPanel';
-import { RelatedNotesPanel, AiWritingPanel } from '@/components/ai';
+import { RightSidebar } from '@/components/ai';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useLinkStore } from '@/store/linkStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -69,7 +68,7 @@ import ShareModal from '@/components/dashboard/ShareModal';
 import { useAuthStore } from '@/store/authStore';
 import { createCollaborationProvider, destroyCollaborationProvider } from '@/lib/collaboration';
 import { useTheme } from '@/providers/ThemeProvider';
-import { parseContentForLinks, buildWikilink } from '@/lib/linkParser';
+import { buildWikilink } from '@/lib/linkParser';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function isUuid(s: string) {
@@ -164,8 +163,6 @@ export default function NoteEditor() {
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
   const [linkQuery, setLinkQuery] = useState('');
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
-  const [rightTab, setRightTab] = useState<'connections' | 'related' | 'ai'>('connections');
 
   const note = useMemo(() => notes.find((n) => n.id === noteId), [notes, noteId]);
 
@@ -383,81 +380,37 @@ export default function NoteEditor() {
           </div>
         </div>
         
-        {/* Right Sidebar — Connections / Related / AI */}
-        <div className={`border-l border-border bg-card hidden xl:flex flex-col transition-all duration-200 ${rightSidebarCollapsed ? 'w-12' : 'w-72'}`}>
-          {rightSidebarCollapsed ? (
-            <div className="flex-1 flex flex-col items-center py-2 gap-3">
-              <button
-                onClick={() => setRightSidebarCollapsed(false)}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                title="Show panel"
-              >
-                <PanelRight size={18} />
-              </button>
-              <button onClick={() => { setRightSidebarCollapsed(false); setRightTab('related'); }}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="Related Notes">
-                <Network size={16} />
-              </button>
-              <button onClick={() => { setRightSidebarCollapsed(false); setRightTab('ai'); }}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors" title="AI Tools">
-                <Wand2 size={16} />
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Tab bar */}
-              <div className="flex items-center border-b border-border">
-                {(['connections', 'related', 'ai'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setRightTab(tab)}
-                    className={`flex-1 py-2 text-xs font-medium transition-colors capitalize
-                      ${rightTab === tab
-                        ? 'border-b-2 border-primary text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                  >
-                    {tab === 'connections' ? <Link2 size={12} className="inline mr-1" /> : null}
-                    {tab === 'related' ? <Network size={12} className="inline mr-1" /> : null}
-                    {tab === 'ai' ? <Wand2 size={12} className="inline mr-1" /> : null}
-                    {tab === 'connections' ? 'Backlinks' : tab === 'related' ? 'Related' : 'AI'}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setRightSidebarCollapsed(true)}
-                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  title="Collapse"
-                >
-                  <PanelRightClose size={14} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-auto">
-                {rightTab === 'connections' && <BacklinksPanel noteId={noteId!} />}
-                {rightTab === 'related' && <RelatedNotesPanel noteId={noteId!} />}
-                {rightTab === 'ai' && (
-                  <AiWritingPanel
-                    noteId={noteId!}
-                    getSelectedText={() => {
-                      if (!editor) return '';
-                      return editor.document
-                        .flatMap((b: any) => b.content ?? [])
-                        .filter((c: any) => c.type === 'text')
-                        .map((c: any) => c.text)
-                        .join(' ');
-                    }}
-                    onApply={(text) => {
-                      if (!editor) return;
-                      const block = editor.getTextCursorPosition().block;
-                      editor.insertBlocks([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }], block, 'after');
-                    }}
-                    onTitleApply={(title) => save({ title })}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        {/* Right Sidebar — shared component */}
+        <RightSidebar
+          note={note}
+          contentText={
+            editor
+              ? editor.document
+                  .flatMap((b: any) => b.content ?? [])
+                  .filter((c: any) => c.type === 'text')
+                  .map((c: any) => c.text)
+                  .join(' ')
+              : ''
+          }
+          getSelectedText={() => {
+            if (!editor) return '';
+            return editor.document
+              .flatMap((b: any) => b.content ?? [])
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text)
+              .join(' ');
+          }}
+          onApplyText={(text) => {
+            if (!editor) return;
+            const block = editor.getTextCursorPosition().block;
+            editor.insertBlocks(
+              [{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }],
+              block,
+              'after'
+            );
+          }}
+          onApplyTitle={(title) => save({ title })}
+        />
       </div>
     </div>
   );

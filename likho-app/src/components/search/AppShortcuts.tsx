@@ -5,6 +5,7 @@ import { SearchDialog } from "@/components/search/SearchDialog";
 import { RagChat } from "@/components/search/RagChat";
 import { LlmSettingsDialog } from "@/components/search/LlmSettingsDialog";
 import { ShortcutsHelp } from "@/components/search/ShortcutsHelp";
+import { useTempNotesStore } from "@/store/tempNotesStore";
 
 export function AppShortcuts() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export function AppShortcuts() {
   const [showRagChat, setShowRagChat] = useState(false);
   const [showLlmSettings, setShowLlmSettings] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const { setQuickCaptureOpen } = useTempNotesStore();
 
   // Cmd+K - Search
   useKeyboardShortcut(
@@ -74,6 +76,15 @@ export function AppShortcuts() {
       navigate("/dashboard/settings");
     },
     { key: "s", meta: true, shift: true }
+  );
+
+  // Cmd+Shift+N - Quick capture temp note
+  useKeyboardShortcut(
+    () => {
+      console.log("Cmd+Shift+N: Opening quick capture");
+      setQuickCaptureOpen(true);
+    },
+    { key: "n", meta: true, shift: true }
   );
 
   return (
