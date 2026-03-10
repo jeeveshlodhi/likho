@@ -1,13 +1,35 @@
-import Header from "@/components/landing/header";
+import Navbar from '@/components/landing/Navbar';
+import Hero from '@/components/landing/Hero';
+import Problem from '@/components/landing/Problem';
+import Solution from '@/components/landing/Solution';
+import FeatureNotes from '@/components/landing/FeatureNotes';
+import FeatureKanban from '@/components/landing/FeatureKanban';
+import FeatureCanvas from '@/components/landing/FeatureCanvas';
+import TemplateGallery from '@/components/landing/TemplateGallery';
+import ProductPreview from '@/components/landing/ProductPreview';
+import UseCases from '@/components/landing/UseCases';
+import FinalCTA from '@/components/landing/FinalCTA';
+import Footer from '@/components/landing/Footer';
 
 const Welcome = () => {
-    return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
-                <Header />
-            </div>
-        </div>
-    );
+  return (
+    <div className="h-full overflow-y-auto overflow-x-hidden bg-background scroll-smooth">
+      <Navbar />
+      <main>
+        <Hero />
+        <Problem />
+        <Solution />
+        <FeatureNotes />
+        <FeatureKanban />
+        <FeatureCanvas />
+        <TemplateGallery />
+        <ProductPreview />
+        <UseCases />
+        <FinalCTA />
+      </main>
+      <Footer />
+    </div>
+  );
 };
 
 export default Welcome;

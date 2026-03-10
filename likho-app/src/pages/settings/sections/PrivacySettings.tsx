@@ -1,8 +1,11 @@
-import { Eye, EyeOff, Mail, Search, Database, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Eye, EyeOff, Mail, Search, Database, BarChart3, Loader2, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -21,9 +24,44 @@ const visibilityOptions = [
 export function PrivacySettings() {
   const privacy = useSettingsStore((state) => state.privacy);
   const updatePrivacySettings = useSettingsStore((state) => state.updatePrivacySettings);
+  const savePrivacySettingsToBackend = useSettingsStore((state) => state.savePrivacySettingsToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
+
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  const handleSave = async () => {
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await savePrivacySettingsToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
       <SettingsSection
         title="Profile Visibility"
         description="Control who can see your profile information"
@@ -36,6 +74,7 @@ export function PrivacySettings() {
               onValueChange={(value) =>
                 updatePrivacySettings({ profileVisibility: value as typeof privacy.profileVisibility })
               }
+              disabled={isLoading}
             >
               <SelectTrigger id="visibility">
                 <SelectValue />
@@ -66,6 +105,7 @@ export function PrivacySettings() {
             <Switch
               checked={privacy.showEmail}
               onCheckedChange={(checked) => updatePrivacySettings({ showEmail: checked })}
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -93,6 +133,7 @@ export function PrivacySettings() {
             <Switch
               checked={privacy.allowSearchEngines}
               onCheckedChange={(checked) => updatePrivacySettings({ allowSearchEngines: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -132,6 +173,7 @@ export function PrivacySettings() {
             <Switch
               checked={privacy.analyticsOptIn}
               onCheckedChange={(checked) => updatePrivacySettings({ analyticsOptIn: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -150,6 +192,7 @@ export function PrivacySettings() {
             <Switch
               checked={privacy.dataCollection}
               onCheckedChange={(checked) => updatePrivacySettings({ dataCollection: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -170,6 +213,23 @@ export function PrivacySettings() {
           </div>
         </div>
       </SettingsSection>
+
+      {/* Save Button */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        {showSuccess && (
+          <span className="text-sm text-green-600">Changes saved successfully!</span>
+        )}
+        <Button onClick={handleSave} disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

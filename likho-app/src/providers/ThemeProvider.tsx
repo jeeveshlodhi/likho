@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { useSettingsStore } from "@/store/settingsStore"
 
 export type Theme = "dark" | "light" | "system"
 
@@ -23,13 +24,27 @@ export const ThemeProviderContext = createContext<ThemeProviderState>(initialSta
 export function ThemeProvider({
     children,
     defaultTheme = "system",
-    storageKey = "vite-ui-theme",
     ...props
 }: ThemeProviderProps) {
-    const [theme, setTheme] = useState<Theme>(
-        () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-    )
+    // Get theme from settings store
+    const storeTheme = useSettingsStore((state) => state.appearance.theme)
+    const setStoreTheme = useSettingsStore((state) => state.setTheme)
+    const accentColor = useSettingsStore((state) => state.appearance.accentColor)
+    const density = useSettingsStore((state) => state.appearance.density)
+    const highContrast = useSettingsStore((state) => state.appearance.highContrast)
+    const reducedMotion = useSettingsStore((state) => state.appearance.reducedMotion)
+    
+    // Use store theme, fallback to default
+    const [theme, setThemeState] = useState<Theme>(storeTheme || defaultTheme)
 
+    // Sync with store when it changes
+    useEffect(() => {
+        if (storeTheme) {
+            setThemeState(storeTheme)
+        }
+    }, [storeTheme])
+
+    // Apply theme to document
     useEffect(() => {
         const root = window.document.documentElement
 
@@ -42,18 +57,64 @@ export function ThemeProvider({
                 : "light"
 
             root.classList.add(systemTheme)
-            return
+        } else {
+            root.classList.add(theme)
         }
-
-        root.classList.add(theme)
     }, [theme])
+
+    // Apply accent color as CSS variable
+    useEffect(() => {
+        const root = window.document.documentElement
+        if (accentColor) {
+            root.style.setProperty('--accent-color', accentColor)
+            // Also set the primary color to match accent
+            root.style.setProperty('--primary', accentColor)
+        }
+    }, [accentColor])
+
+    // Apply density as CSS variable
+    useEffect(() => {
+        const root = window.document.documentElement
+        const densityValues = {
+            compact: '0.5rem',
+            comfortable: '1rem',
+            spacious: '1.5rem'
+        }
+        root.style.setProperty('--density', densityValues[density] || '1rem')
+        
+        // Add density class for component-specific styling
+        root.classList.remove('density-compact', 'density-comfortable', 'density-spacious')
+        root.classList.add(`density-${density}`)
+    }, [density])
+
+    // Apply high contrast
+    useEffect(() => {
+        const root = window.document.documentElement
+        if (highContrast) {
+            root.classList.add('high-contrast')
+        } else {
+            root.classList.remove('high-contrast')
+        }
+    }, [highContrast])
+
+    // Apply reduced motion
+    useEffect(() => {
+        const root = window.document.documentElement
+        if (reducedMotion) {
+            root.classList.add('reduce-motion')
+        } else {
+            root.classList.remove('reduce-motion')
+        }
+    }, [reducedMotion])
+
+    const setTheme = (newTheme: Theme) => {
+        setThemeState(newTheme)
+        setStoreTheme(newTheme)
+    }
 
     const value = {
         theme,
-        setTheme: (theme: Theme) => {
-            localStorage.setItem(storageKey, theme)
-            setTheme(theme)
-        },
+        setTheme,
     }
 
     return (

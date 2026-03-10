@@ -107,3 +107,79 @@
 .animate-gradient-x {
   animation: gradient-x 3s ease infinite;
 }
+
+/* ─── Accent Color Override ─── */
+/* When accent-color is set, use it for primary colors */
+:root[style*="--accent-color"] {
+  --primary: var(--accent-color);
+  --ring: var(--accent-color);
+}
+
+.dark[style*="--accent-color"] {
+  --primary: var(--accent-color);
+  --ring: var(--accent-color);
+}
+
+/* ─── Density Settings ─── */
+.density-compact {
+  --density: 0.5rem;
+}
+
+.density-comfortable {
+  --density: 1rem;
+}
+
+.density-spacious {
+  --density: 1.5rem;
+}
+
+/* Apply density to common elements */
+.density-compact .p-setting {
+  padding: calc(var(--density) * 0.5);
+}
+
+.density-compact .gap-setting {
+  gap: calc(var(--density) * 0.5);
+}
+
+.density-spacious .p-setting {
+  padding: calc(var(--density) * 1.5);
+}
+
+.density-spacious .gap-setting {
+  gap: calc(var(--density) * 1.5);
+}
+
+/* ─── High Contrast Mode ─── */
+.high-contrast {
+  --border: currentColor;
+  --ring: currentColor;
+}
+
+.high-contrast .dark {
+  --border: currentColor;
+  --ring: currentColor;
+}
+
+/* ─── Reduced Motion ─── */
+.reduce-motion,
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Respect user's system preferences for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

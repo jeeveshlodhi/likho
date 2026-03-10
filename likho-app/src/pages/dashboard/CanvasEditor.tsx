@@ -6,9 +6,49 @@ import { updatePage } from '@/lib/workspaceApi';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import { useTheme } from '@/providers/ThemeProvider';
-import CustomCanvas from '@/components/canvas/CustomCanvas';
-import { CanvasScene } from '@/types/canvas';
+import ExcalidrawCanvas from '@/components/canvas/ExcalidrawCanvas';
+import type { CanvasElement, CanvasScene } from '@/types/canvas';
 import { RightSidebar } from '@/components/ai';
+
+// ─── Element sanitizer ───────────────────────────────────────────────────────
+// Migrates old-format saved data: filters unknown types, fills required fields.
+
+const VALID_ELEMENT_TYPES = new Set([
+  'rectangle', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'text', 'image',
+]);
+
+function sanitizeElements(raw: unknown[]): CanvasElement[] {
+  return raw
+    .filter((el): el is Record<string, unknown> =>
+      el !== null && typeof el === 'object' && VALID_ELEMENT_TYPES.has((el as any).type)
+    )
+    .map((el): CanvasElement => ({
+      id: typeof el.id === 'string' ? el.id : `el-${Math.random().toString(36).slice(2)}`,
+      type: el.type as CanvasElement['type'],
+      x: typeof el.x === 'number' ? el.x : 0,
+      y: typeof el.y === 'number' ? el.y : 0,
+      width: typeof el.width === 'number' ? el.width : 0,
+      height: typeof el.height === 'number' ? el.height : 0,
+      angle: typeof el.angle === 'number' && isFinite(el.angle) ? el.angle : 0,
+      strokeColor: typeof el.strokeColor === 'string' ? el.strokeColor : '#1e1e1e',
+      backgroundColor: typeof el.backgroundColor === 'string' ? el.backgroundColor : 'transparent',
+      fillStyle: (el.fillStyle as CanvasElement['fillStyle']) ?? 'hachure',
+      strokeWidth: typeof el.strokeWidth === 'number' && el.strokeWidth > 0 ? el.strokeWidth : 2,
+      strokeStyle: (el.strokeStyle as CanvasElement['strokeStyle']) ?? 'solid',
+      roughness: typeof el.roughness === 'number' && isFinite(el.roughness) ? el.roughness : 1,
+      opacity: typeof el.opacity === 'number' ? el.opacity : 100,
+      seed: typeof el.seed === 'number' && el.seed > 0 ? el.seed : Math.floor(Math.random() * 100000),
+      version: typeof el.version === 'number' ? el.version : 1,
+      ...(Array.isArray(el.points) ? { points: el.points } : {}),
+      ...(typeof el.text === 'string' ? { text: el.text } : {}),
+      ...(typeof el.fontSize === 'number' ? { fontSize: el.fontSize } : {}),
+      ...(typeof el.fontFamily === 'string' ? { fontFamily: el.fontFamily } : {}),
+      ...(typeof el.textAlign === 'string' ? { textAlign: el.textAlign as CanvasElement['textAlign'] } : {}),
+      ...(typeof el.src === 'string' ? { src: el.src } : {}),
+      ...(el.groupId !== undefined ? { groupId: el.groupId as string | null } : {}),
+      ...(typeof el.edgeStyle === 'string' ? { edgeStyle: el.edgeStyle as CanvasElement['edgeStyle'] } : {}),
+    }));
+}
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -65,7 +105,7 @@ export default function CanvasEditor() {
     }
 
     setInitialData({
-      elements: Array.isArray(raw.elements) ? raw.elements : [],
+      elements: sanitizeElements(Array.isArray(raw.elements) ? raw.elements : []),
       camera: raw.camera || { x: 0, y: 0, zoom: 1 },
     });
   }, [noteId, note]);
@@ -147,7 +187,7 @@ export default function CanvasEditor() {
             <NoteTitleInput note={note} />
           </div>
           {initialData && (
-            <CustomCanvas
+            <ExcalidrawCanvas
               initialData={initialData}
               onChange={handleChange}
               theme={resolvedTheme}
@@ -161,6 +201,7 @@ export default function CanvasEditor() {
           contentText={note.title}
           getSelectedText={() => ''}
           onApplyText={() => {}}
+          defaultCollapsed={true}
         />
       </div>
     </div>

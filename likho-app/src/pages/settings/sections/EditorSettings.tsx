@@ -1,9 +1,12 @@
-import { Type, Save, Clock, FileText, Zap, Bot } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Type, Save, Clock, FileText, Zap, Bot, Loader2, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -30,9 +33,44 @@ const templates = [
 export function EditorSettings() {
   const editor = useSettingsStore((state) => state.editor);
   const updateEditorSettings = useSettingsStore((state) => state.updateEditorSettings);
+  const saveEditorSettingsToBackend = useSettingsStore((state) => state.saveEditorSettingsToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
+
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  const handleSave = async () => {
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await saveEditorSettingsToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
       <SettingsSection
         title="Typography"
         description="Customize the default text appearance"
@@ -45,6 +83,7 @@ export function EditorSettings() {
               onValueChange={(value) =>
                 updateEditorSettings({ defaultFontSize: value as typeof editor.defaultFontSize })
               }
+              disabled={isLoading}
             >
               <SelectTrigger id="fontSize">
                 <SelectValue />
@@ -71,6 +110,7 @@ export function EditorSettings() {
               min={1.0}
               max={2.5}
               step={0.1}
+              disabled={isLoading}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Compact</span>
@@ -91,6 +131,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.spellCheck}
               onCheckedChange={(checked) => updateEditorSettings({ spellCheck: checked })}
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -116,6 +157,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.autoSave}
               onCheckedChange={(checked) => updateEditorSettings({ autoSave: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -132,6 +174,7 @@ export function EditorSettings() {
                 min={5}
                 max={300}
                 step={5}
+                disabled={isLoading}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>5 seconds</span>
@@ -162,6 +205,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.showWordCount}
               onCheckedChange={(checked) => updateEditorSettings({ showWordCount: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -178,6 +222,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.showReadingTime}
               onCheckedChange={(checked) => updateEditorSettings({ showReadingTime: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -194,6 +239,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.enableSlashCommands}
               onCheckedChange={(checked) => updateEditorSettings({ enableSlashCommands: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -210,6 +256,7 @@ export function EditorSettings() {
             <Switch
               checked={editor.enableAIAssistance}
               onCheckedChange={(checked) => updateEditorSettings({ enableAIAssistance: checked })}
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -226,6 +273,7 @@ export function EditorSettings() {
           <Select
             value={editor.defaultPageTemplate}
             onValueChange={(value) => updateEditorSettings({ defaultPageTemplate: value })}
+            disabled={isLoading}
           >
             <SelectTrigger id="defaultTemplate">
               <SelectValue />
@@ -240,6 +288,23 @@ export function EditorSettings() {
           </Select>
         </div>
       </SettingsSection>
+
+      {/* Save Button */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        {showSuccess && (
+          <span className="text-sm text-green-600">Changes saved successfully!</span>
+        )}
+        <Button onClick={handleSave} disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

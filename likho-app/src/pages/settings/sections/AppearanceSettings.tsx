@@ -1,10 +1,13 @@
-import { Monitor, Moon, Sun, Minimize2, Maximize2, Layout } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Monitor, Moon, Sun, Minimize2, Maximize2, Layout, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SettingsSection } from './SettingsSection';
 
 const accentColors = [
@@ -24,16 +27,92 @@ export function AppearanceSettings() {
   const setAccentColor = useSettingsStore((state) => state.setAccentColor);
   const setDensity = useSettingsStore((state) => state.setDensity);
   const updateAppearanceSettings = useSettingsStore((state) => state.updateAppearanceSettings);
+  const saveAppearanceSettingsToBackend = useSettingsStore((state) => state.saveAppearanceSettingsToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
+  
+  // Get theme from context to sync with it
+  const { setTheme: setContextTheme } = useTheme();
+
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  // Track if there are unsaved changes
+  useEffect(() => {
+    setHasChanges(true);
+  }, [appearance]);
+
+  const handleThemeChange = (value: typeof appearance.theme) => {
+    setTheme(value);
+    setContextTheme(value);
+    setHasChanges(true);
+  };
+
+  const handleAccentColorChange = (color: string) => {
+    setAccentColor(color);
+    setHasChanges(true);
+  };
+
+  const handleDensityChange = (density: typeof appearance.density) => {
+    setDensity(density);
+    setHasChanges(true);
+  };
+
+  const handleSettingChange = (updates: Partial<typeof appearance>) => {
+    updateAppearanceSettings(updates);
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await saveAppearanceSettingsToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setHasChanges(false);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Unsaved Changes Warning */}
+      {hasChanges && !showSuccess && (
+        <Alert>
+          <Eye className="h-4 w-4" />
+          <AlertDescription>
+            You have unsaved changes. Click &quot;Save Changes&quot; to persist them.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <SettingsSection
         title="Theme"
         description="Choose your preferred color scheme"
       >
         <RadioGroup
           value={appearance.theme}
-          onValueChange={(value) => setTheme(value as typeof appearance.theme)}
+          onValueChange={(value) => handleThemeChange(value as typeof appearance.theme)}
           className="grid gap-4 sm:grid-cols-3"
         >
           <label
@@ -99,7 +178,7 @@ export function AppearanceSettings() {
           {accentColors.map((color) => (
             <button
               key={color.value}
-              onClick={() => setAccentColor(color.value)}
+              onClick={() => handleAccentColorChange(color.value)}
               className={`group relative flex h-12 w-12 items-center justify-center rounded-full transition-all ${
                 appearance.accentColor === color.value
                   ? 'ring-2 ring-primary ring-offset-2'
@@ -118,6 +197,25 @@ export function AppearanceSettings() {
             </button>
           ))}
         </div>
+        
+        {/* Preview of accent color */}
+        <div className="mt-4 flex items-center gap-4 rounded-lg border border-border bg-muted/30 p-4">
+          <div 
+            className="h-10 w-10 rounded-full"
+            style={{ backgroundColor: appearance.accentColor }}
+          />
+          <div className="flex-1">
+            <p className="font-medium">Current Accent</p>
+            <p className="text-sm text-muted-foreground">{appearance.accentColor}</p>
+          </div>
+          <Button 
+            size="sm" 
+            style={{ backgroundColor: appearance.accentColor }}
+            className="text-white hover:opacity-90"
+          >
+            Preview Button
+          </Button>
+        </div>
       </SettingsSection>
 
       <Separator />
@@ -134,7 +232,7 @@ export function AppearanceSettings() {
           ].map((option) => (
             <button
               key={option.value}
-              onClick={() => setDensity(option.value as typeof appearance.density)}
+              onClick={() => handleDensityChange(option.value as typeof appearance.density)}
               className={`flex flex-1 flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                 appearance.density === option.value
                   ? 'border-primary bg-primary/5'
@@ -163,7 +261,7 @@ export function AppearanceSettings() {
             <Switch
               checked={appearance.reducedMotion}
               onCheckedChange={(checked) =>
-                updateAppearanceSettings({ reducedMotion: checked })
+                handleSettingChange({ reducedMotion: checked })
               }
             />
           </div>
@@ -176,7 +274,7 @@ export function AppearanceSettings() {
             <Switch
               checked={appearance.highContrast}
               onCheckedChange={(checked) =>
-                updateAppearanceSettings({ highContrast: checked })
+                handleSettingChange({ highContrast: checked })
               }
             />
           </div>
@@ -189,7 +287,7 @@ export function AppearanceSettings() {
             <Switch
               checked={appearance.showBreadcrumbs}
               onCheckedChange={(checked) =>
-                updateAppearanceSettings({ showBreadcrumbs: checked })
+                handleSettingChange({ showBreadcrumbs: checked })
               }
             />
           </div>
@@ -202,12 +300,32 @@ export function AppearanceSettings() {
             <Switch
               checked={appearance.showPageIcon}
               onCheckedChange={(checked) =>
-                updateAppearanceSettings({ showPageIcon: checked })
+                handleSettingChange({ showPageIcon: checked })
               }
             />
           </div>
         </div>
       </SettingsSection>
+
+      {/* Save Button */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        {showSuccess && (
+          <span className="text-sm text-green-600">Changes saved successfully!</span>
+        )}
+        {hasChanges && !showSuccess && !isSaving && (
+          <span className="text-sm text-amber-600">Unsaved changes</span>
+        )}
+        <Button onClick={handleSave} disabled={isSaving || isLoading || !hasChanges}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -11,9 +11,11 @@ import { isMac } from '@/utils/platform';
 const TITLEBAR_HEIGHT = 36;
 
 /** Threshold (px) of accumulated horizontal wheel delta to trigger back/forward */
-const SWIPE_THRESHOLD = 80;
+const SWIPE_THRESHOLD = 120;
 /** Reset accumulated delta after this ms of no wheel events */
 const SWIPE_RESET_MS = 200;
+/** Cooldown period (ms) after navigation to prevent multiple triggers from one swipe */
+const NAVIGATION_COOLDOWN_MS = 500;
 
 export function getTitleBarHeight(): number {
   return TITLEBAR_HEIGHT;
@@ -47,8 +49,14 @@ export default function AppTitleBar() {
   // Trackpad two-finger horizontal swipe for back/forward (browser-style)
   const swipeAccum = useRef(0);
   const swipeResetId = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navCooldownId = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInCooldown = useRef(false);
+  
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      // Ignore during cooldown (prevents multiple navigations from one swipe)
+      if (isInCooldown.current) return;
+      
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // only horizontal swipes
       swipeAccum.current += e.deltaX;
       if (swipeResetId.current) clearTimeout(swipeResetId.current);
@@ -59,19 +67,40 @@ export default function AppTitleBar() {
       if (swipeAccum.current >= SWIPE_THRESHOLD) {
         swipeAccum.current = 0;
         if (swipeResetId.current) clearTimeout(swipeResetId.current);
+        
+        // Trigger back navigation
         navigate(-1); // back (swipe right → positive deltaX)
         e.preventDefault();
+        
+        // Start cooldown to prevent multiple navigations
+        isInCooldown.current = true;
+        if (navCooldownId.current) clearTimeout(navCooldownId.current);
+        navCooldownId.current = setTimeout(() => {
+          isInCooldown.current = false;
+          navCooldownId.current = null;
+        }, NAVIGATION_COOLDOWN_MS);
       } else if (swipeAccum.current <= -SWIPE_THRESHOLD) {
         swipeAccum.current = 0;
         if (swipeResetId.current) clearTimeout(swipeResetId.current);
+        
+        // Trigger forward navigation
         navigate(1); // forward (swipe left → negative deltaX)
         e.preventDefault();
+        
+        // Start cooldown to prevent multiple navigations
+        isInCooldown.current = true;
+        if (navCooldownId.current) clearTimeout(navCooldownId.current);
+        navCooldownId.current = setTimeout(() => {
+          isInCooldown.current = false;
+          navCooldownId.current = null;
+        }, NAVIGATION_COOLDOWN_MS);
       }
     };
     document.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       document.removeEventListener('wheel', onWheel);
       if (swipeResetId.current) clearTimeout(swipeResetId.current);
+      if (navCooldownId.current) clearTimeout(navCooldownId.current);
     };
   }, [navigate]);
 

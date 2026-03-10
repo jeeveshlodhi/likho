@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import { isBefore, parseISO, differenceInHours } from 'date-fns';
-import { Clock, Plus, Sparkles, Bookmark, ListFilter, Trash2 } from 'lucide-react';
+import { isBefore, parseISO, differenceInHours, formatDistanceToNow } from 'date-fns';
+import { 
+  Clock, Plus, Sparkles, Bookmark, ListFilter, Trash2, 
+  LayoutGrid, AlertCircle, Zap 
+} from 'lucide-react';
 import { useTempNotesStore } from '@/store/tempNotesStore';
 import { TempNoteCard } from '@/components/dashboard/TempNoteCard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterMode = 'active' | 'expiring' | 'permanent' | 'all';
 
@@ -52,26 +56,33 @@ export default function TempNotesDashboard() {
   ).length;
   const permanentCount = notes.filter((n) => n.isPermanent).length;
 
+  const filterTabs = [
+    { key: 'active' as FilterMode, label: 'Active', count: activeCount, icon: Clock, color: 'blue' },
+    { key: 'expiring' as FilterMode, label: 'Expiring Soon', count: expiringCount, icon: AlertCircle, color: 'amber' },
+    { key: 'permanent' as FilterMode, label: 'Kept', count: permanentCount, icon: Bookmark, color: 'emerald' },
+    { key: 'all' as FilterMode, label: 'All', count: notes.length, icon: LayoutGrid, color: 'slate' },
+  ];
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-            <Clock size={18} className="text-primary" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+            <Zap size={20} className="text-white" fill="currentColor" />
           </div>
           <div>
             <h1 className="text-lg font-bold leading-tight">Temporary Notes</h1>
             <p className="text-xs text-muted-foreground">
-              {activeCount} active · {expiringCount} expiring soon
+              {activeCount} active · {expiringCount} expiring soon · {permanentCount} kept
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* TTL default setting */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
-            <Clock size={13} className="text-muted-foreground" />
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <Clock size={14} className="text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Default TTL</span>
             <select
               value={settings.defaultTtlDays}
@@ -80,7 +91,7 @@ export default function TempNotesDashboard() {
             >
               {[1, 3, 7, 14, 30].map((d) => (
                 <option key={d} value={d}>
-                  {d}d
+                  {d} days
                 </option>
               ))}
             </select>
@@ -88,60 +99,75 @@ export default function TempNotesDashboard() {
 
           <button
             onClick={() => setQuickCaptureOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
           >
-            <Plus size={15} />
+            <Plus size={16} />
             New Note
           </button>
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 border-b border-border px-6 py-2">
-        <ListFilter size={13} className="mr-1 text-muted-foreground" />
-        {(
-          [
-            { key: 'active' as FilterMode, label: 'Active', count: activeCount, warn: false },
-            { key: 'expiring' as FilterMode, label: 'Expiring', count: expiringCount, warn: true },
-            { key: 'permanent' as FilterMode, label: 'Kept', count: permanentCount, warn: false },
-            { key: 'all' as FilterMode, label: 'All', count: notes.length, warn: false },
-          ]
-        ).map(({ key, label, count, warn }) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key as FilterMode)}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-            }`}
-          >
-            {label}
-            <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+      {/* Filter Tabs */}
+      <div className="border-b border-border px-6 py-3">
+        <div className="flex items-center gap-2">
+          <ListFilter size={14} className="text-muted-foreground mr-1" />
+          {filterTabs.map(({ key, label, count, icon: Icon, color }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key as FilterMode)}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                 filter === key
-                  ? 'bg-white/20 text-white'
-                  : warn && count > 0
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                  : 'bg-muted text-muted-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
-              {count}
-            </span>
-          </button>
-        ))}
+              <Icon size={14} />
+              {label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+                  filter === key
+                    ? 'bg-white/20 text-white'
+                    : count > 0 && key === 'expiring'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Notes grid */}
+      {/* Notes Grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {filteredNotes.length === 0 ? (
           <EmptyState filter={filter} onNew={() => setQuickCaptureOpen(true)} />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredNotes.map((note) => (
-              <TempNoteCard key={note.id} note={note} />
-            ))}
-          </div>
+          <motion.div 
+            layout
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr"
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredNotes.map((note, index) => (
+                <motion.div
+                  key={note.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ 
+                    duration: 0.2, 
+                    delay: index * 0.03,
+                    layout: { duration: 0.2 }
+                  }}
+                  className="h-full"
+                >
+                  <TempNoteCard note={note} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>
@@ -155,43 +181,47 @@ function EmptyState({
   filter: FilterMode;
   onNew: () => void;
 }) {
-  const messages: Record<FilterMode, { icon: React.ReactNode; title: string; desc: string }> = {
+  const messages: Record<FilterMode, { icon: React.ReactNode; title: string; desc: string; action?: string }> = {
     active: {
-      icon: <Clock size={36} className="text-muted-foreground/40" />,
+      icon: <Clock size={48} className="text-muted-foreground/30" />,
       title: 'No active notes',
       desc: 'Capture a quick thought. It will auto-delete after the set period.',
+      action: 'Capture a note',
     },
     expiring: {
-      icon: <Trash2 size={36} className="text-amber-400/60" />,
+      icon: <AlertCircle size={48} className="text-amber-400/40" />,
       title: 'Nothing expiring soon',
       desc: 'Notes expiring within 48 hours will appear here.',
     },
     permanent: {
-      icon: <Bookmark size={36} className="text-emerald-400/60" />,
+      icon: <Bookmark size={48} className="text-emerald-400/40" />,
       title: 'No kept notes',
       desc: 'Press "Keep" on any note to save it permanently.',
     },
     all: {
-      icon: <Sparkles size={36} className="text-muted-foreground/40" />,
+      icon: <Sparkles size={48} className="text-muted-foreground/30" />,
       title: 'No notes yet',
-      desc: 'Start capturing temporary notes below.',
+      desc: 'Start capturing temporary notes that auto-delete after a set time.',
+      action: 'Create your first note',
     },
   };
 
-  const { icon, title, desc } = messages[filter];
+  const { icon, title, desc, action } = messages[filter];
 
   return (
     <div className="flex h-full flex-col items-center justify-center py-20 text-center">
-      <div className="mb-4">{icon}</div>
-      <h3 className="mb-1 text-base font-semibold text-foreground">{title}</h3>
-      <p className="mb-6 max-w-xs text-sm text-muted-foreground">{desc}</p>
-      {(filter === 'active' || filter === 'all') && (
+      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-muted/50">
+        {icon}
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-foreground">{title}</h3>
+      <p className="mb-8 max-w-sm text-sm text-muted-foreground">{desc}</p>
+      {action && (
         <button
           onClick={onNew}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
         >
-          <Plus size={15} />
-          Capture a note
+          <Plus size={16} />
+          {action}
         </button>
       )}
     </div>

@@ -1,10 +1,13 @@
-import { Building2, Users, HardDrive, Share2, MessageSquare, LayoutTemplate, Globe, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building2, Users, HardDrive, Share2, MessageSquare, LayoutTemplate, Globe, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -30,9 +33,44 @@ function formatBytes(bytes: number): string {
 export function WorkspaceSettings() {
   const workspace = useSettingsStore((state) => state.workspace);
   const updateWorkspaceSettings = useSettingsStore((state) => state.updateWorkspaceSettings);
+  const saveWorkspaceSettingsToBackend = useSettingsStore((state) => state.saveWorkspaceSettingsToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
+
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  const handleSave = async () => {
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await saveWorkspaceSettingsToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
       <SettingsSection
         title="Workspace Information"
         description="Manage your workspace details"
@@ -48,6 +86,7 @@ export function WorkspaceSettings() {
                 onChange={(e) => updateWorkspaceSettings({ name: e.target.value })}
                 className="pl-10"
                 placeholder="My Workspace"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -59,6 +98,7 @@ export function WorkspaceSettings() {
               onValueChange={(value) =>
                 updateWorkspaceSettings({ defaultSpace: value as typeof workspace.defaultSpace })
               }
+              disabled={isLoading}
             >
               <SelectTrigger id="defaultSpace">
                 <SelectValue />
@@ -98,6 +138,7 @@ export function WorkspaceSettings() {
             <Switch
               checked={workspace.allowGuests}
               onCheckedChange={(checked) => updateWorkspaceSettings({ allowGuests: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -113,6 +154,7 @@ export function WorkspaceSettings() {
               min={1}
               max={100}
               step={1}
+              disabled={isLoading}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>1 member</span>
@@ -157,6 +199,7 @@ export function WorkspaceSettings() {
               min={1}
               max={100}
               step={1}
+              disabled={isLoading}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>1 GB</span>
@@ -192,6 +235,7 @@ export function WorkspaceSettings() {
             <Switch
               checked={workspace.publicSharing}
               onCheckedChange={(checked) => updateWorkspaceSettings({ publicSharing: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -208,6 +252,7 @@ export function WorkspaceSettings() {
             <Switch
               checked={workspace.allowComments}
               onCheckedChange={(checked) => updateWorkspaceSettings({ allowComments: checked })}
+              disabled={isLoading}
             />
           </div>
 
@@ -224,10 +269,28 @@ export function WorkspaceSettings() {
             <Switch
               checked={workspace.allowTemplates}
               onCheckedChange={(checked) => updateWorkspaceSettings({ allowTemplates: checked })}
+              disabled={isLoading}
             />
           </div>
         </div>
       </SettingsSection>
+
+      {/* Save Button */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        {showSuccess && (
+          <span className="text-sm text-green-600">Changes saved successfully!</span>
+        )}
+        <Button onClick={handleSave} disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

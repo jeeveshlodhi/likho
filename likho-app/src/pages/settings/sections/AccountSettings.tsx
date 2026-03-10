@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, Mail, Globe, Clock, Camera, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Mail, Globe, Clock, Camera, Loader2, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SettingsSection } from './SettingsSection';
 
 const timezones = [
@@ -50,21 +51,63 @@ const locales = [
 export function AccountSettings() {
   const profile = useSettingsStore((state) => state.profile);
   const updateProfile = useSettingsStore((state) => state.updateProfile);
+  const saveProfileToBackend = useSettingsStore((state) => state.saveProfileToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
   const { user } = useAuthStore();
-  const [isSaving, setIsSaving] = useState(false);
+
   const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  // Sync auth user data with settings profile
+  useEffect(() => {
+    if (user) {
+      updateProfile({
+        id: String(user.id),
+        email: user.email,
+        fullName: user.full_name || profile.fullName,
+        username: user.username || profile.username,
+      });
+    }
+  }, [user]);
 
   const handleSave = async () => {
-    setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setIsSaving(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await saveProfileToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
+
+  const handleAvatarChange = () => {
+    // TODO: Implement avatar upload
+    // This would open a file picker and upload the image
+    alert('Avatar upload coming soon!');
   };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Profile Section */}
       <SettingsSection
         title="Profile Information"
@@ -78,7 +121,7 @@ export function AccountSettings() {
                 {profile.fullName?.charAt(0) || profile.username?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleAvatarChange}>
               <Camera size={14} />
               Change Photo
             </Button>
@@ -96,6 +139,7 @@ export function AccountSettings() {
                     onChange={(e) => updateProfile({ fullName: e.target.value })}
                     className="pl-10"
                     placeholder="Your full name"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -107,6 +151,7 @@ export function AccountSettings() {
                   value={profile.username}
                   onChange={(e) => updateProfile({ username: e.target.value })}
                   placeholder="@username"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -119,9 +164,12 @@ export function AccountSettings() {
                 onChange={(e) => updateProfile({ bio: e.target.value })}
                 placeholder="Tell us about yourself..."
                 rows={3}
+                disabled={isLoading}
+                maxLength={160}
               />
               <p className="text-xs text-muted-foreground">
                 Brief description for your profile. Maximum 160 characters.
+                {profile.bio && ` (${profile.bio.length}/160)`}
               </p>
             </div>
           </div>
@@ -148,19 +196,34 @@ export function AccountSettings() {
                 className="pl-10"
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Email cannot be changed. Contact support if you need to update it.
+            </p>
           </div>
 
           <div className="flex items-center gap-4 rounded-lg border border-border bg-muted/50 p-4">
             <div className="flex-1">
               <p className="font-medium">Email Verification</p>
               <p className="text-sm text-muted-foreground">
-                Your email is verified. You can receive notifications and reset your password.
+                {user?.email_verified
+                  ? 'Your email is verified. You can receive notifications and reset your password.'
+                  : 'Your email is not verified. Please check your inbox for a verification link.'}
               </p>
             </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10 text-green-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                user?.email_verified
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-amber-500/10 text-amber-600'
+              }`}
+            >
+              {user?.email_verified ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <AlertCircle className="h-5 w-5" />
+              )}
             </div>
           </div>
         </div>
@@ -182,6 +245,7 @@ export function AccountSettings() {
             <Select
               value={profile.timezone}
               onValueChange={(value) => updateProfile({ timezone: value })}
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select timezone" />
@@ -204,6 +268,7 @@ export function AccountSettings() {
             <Select
               value={profile.locale}
               onValueChange={(value) => updateProfile({ locale: value })}
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select language" />
@@ -236,7 +301,9 @@ export function AccountSettings() {
                 Permanently delete your account and all associated data. This action cannot be undone.
               </p>
             </div>
-            <Button variant="destructive">Delete Account</Button>
+            <Button variant="destructive" disabled>
+              Delete Account
+            </Button>
           </div>
         </div>
       </SettingsSection>
@@ -246,7 +313,7 @@ export function AccountSettings() {
         {showSuccess && (
           <span className="text-sm text-green-600">Changes saved successfully!</span>
         )}
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving || isLoading}>
           {isSaving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

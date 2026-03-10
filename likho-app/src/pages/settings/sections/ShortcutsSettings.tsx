@@ -179,6 +179,11 @@ export function ShortcutsSettings() {
           </Button>
         </div>
       </SettingsSection>
+
+      {/* Note: Shortcuts are saved automatically */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        <span className="text-sm text-muted-foreground">Changes saved automatically</span>
+      </div>
     </div>
   );
 }

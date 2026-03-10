@@ -62,6 +62,7 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
+    "roughjs": "^4.6.6",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "unified": "^11.0.5",

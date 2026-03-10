@@ -67,7 +67,7 @@ function App() {
     return (
       <div className="flex h-screen flex-col bg-background">
         <AppTitleBar />
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-auto">
           {routes}
         </div>
         <TempNoteQuickCapture />
@@ -75,9 +75,9 @@ function App() {
     );
   }
 
-  // Browser: wrap in full-height container so dashboard sidebar (h-full) has a defined height
+  // Browser: full-height container with scrolling enabled
   return (
-    <div className="h-screen min-h-0 overflow-hidden bg-background">
+    <div className="h-screen min-h-0 overflow-auto bg-background">
       {routes}
       <TempNoteQuickCapture />
     </div>

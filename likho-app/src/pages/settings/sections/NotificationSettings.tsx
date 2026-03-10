@@ -1,8 +1,11 @@
-import { Mail, Bell, Smartphone, Monitor } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Bell, Smartphone, Monitor, Loader2, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -17,9 +20,44 @@ export function NotificationSettings() {
   const updateEmailNotification = useSettingsStore((state) => state.updateEmailNotification);
   const updatePushNotification = useSettingsStore((state) => state.updatePushNotification);
   const updateInAppNotification = useSettingsStore((state) => state.updateInAppNotification);
+  const saveNotificationSettingsToBackend = useSettingsStore((state) => state.saveNotificationSettingsToBackend);
+  const syncFromBackend = useSettingsStore((state) => state.syncFromBackend);
+  const isSaving = useSettingsStore((state) => state.isSaving);
+  const isLoading = useSettingsStore((state) => state.isLoading);
+  const error = useSettingsStore((state) => state.error);
+
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  const handleSave = async () => {
+    setShowSuccess(false);
+    setLocalError(null);
+
+    const success = await saveNotificationSettingsToBackend();
+
+    if (success) {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setLocalError(error || 'Failed to save changes. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {(localError || error) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{localError || error}</AlertDescription>
+        </Alert>
+      )}
+
       <SettingsSection
         title="Email Notifications"
         description="Configure which emails you receive"
@@ -50,6 +88,7 @@ export function NotificationSettings() {
                 onCheckedChange={(checked) =>
                   updateEmailNotification(item.key as keyof typeof notifications.email, checked)
                 }
+                disabled={isLoading}
               />
             </div>
           ))}
@@ -59,6 +98,7 @@ export function NotificationSettings() {
             <Select
               value={notifications.email.digest}
               onValueChange={(value) => updateEmailNotification('digest', value)}
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -93,6 +133,7 @@ export function NotificationSettings() {
             <Switch
               checked={notifications.push.enabled}
               onCheckedChange={(checked) => updatePushNotification('enabled', checked)}
+              disabled={isLoading}
             />
           </div>
 
@@ -117,6 +158,7 @@ export function NotificationSettings() {
                     onCheckedChange={(checked) =>
                       updatePushNotification(item.key as keyof typeof notifications.push, checked)
                     }
+                    disabled={isLoading}
                   />
                 </div>
               ))}
@@ -157,11 +199,29 @@ export function NotificationSettings() {
                 onCheckedChange={(checked) =>
                   updateInAppNotification(item.key as keyof typeof notifications.inApp, checked)
                 }
+                disabled={isLoading}
               />
             </div>
           ))}
         </div>
       </SettingsSection>
+
+      {/* Save Button */}
+      <div className="flex items-center justify-end gap-4 pt-4">
+        {showSuccess && (
+          <span className="text-sm text-green-600">Changes saved successfully!</span>
+        )}
+        <Button onClick={handleSave} disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

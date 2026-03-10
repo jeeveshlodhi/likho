@@ -29,6 +29,8 @@ interface RightSidebarProps {
   onApplyTitle?: (title: string) => void;
   /** Which tabs to show — defaults based on pageType */
   availableTabs?: SidebarTab[];
+  /** Start collapsed (default: false) */
+  defaultCollapsed?: boolean;
 }
 
 // Tabs available per page type
@@ -261,9 +263,10 @@ export function RightSidebar({
   onApplyText,
   onApplyTitle,
   availableTabs,
+  defaultCollapsed = false,
 }: RightSidebarProps) {
   const tabs = availableTabs ?? TABS_FOR_TYPE[note.pageType ?? 'note'] ?? ['info', 'ai'];
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [activeTab, setActiveTab] = useState<SidebarTab>(tabs[0] ?? 'info');
 
   // Ensure activeTab is always in available tabs

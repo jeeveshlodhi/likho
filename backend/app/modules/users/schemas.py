@@ -30,9 +30,6 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
-    timezone: Optional[str] = None
-    locale: Optional[str] = None
-    theme: Optional[ThemeType] = None
 
 
 class UserPreferencesUpdate(BaseModel):
