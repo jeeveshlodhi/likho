@@ -1,5 +1,6 @@
 use tauri::Manager;
 use std::sync::Arc;
+use std::path::PathBuf;
 use tokio::sync::RwLock;
 
 pub mod db;
@@ -8,16 +9,24 @@ pub mod embeddings;
 pub mod search;
 pub mod llm;
 pub mod rag;
-pub mod commands;
+pub mod updater;
 pub mod models;
+pub mod backup;
+
+// Commands module - needs special handling for Tauri commands
+pub mod commands {
+    include!("commands/mod.rs");
+}
 
 use db::Database;
 use embeddings::{EmbeddingEngine, setup_embedding_cache};
 use llm::LlmEngine;
 use search::SearchEngine;
+use updater::UpdaterConfig;
 
 pub struct AppState {
     pub db: Arc<Database>,
+    pub db_path: PathBuf,
     pub embedding_engine: Arc<RwLock<EmbeddingEngine>>,
     pub llm_engine: Arc<RwLock<LlmEngine>>,
     pub search_engine: Arc<SearchEngine>,
@@ -28,6 +37,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_updater::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle();
             let app_data_dir = app_handle
@@ -70,13 +80,28 @@ pub fn run() {
             let search_engine = Arc::new(SearchEngine::new(db.clone()));
             
             let state = AppState {
-                db,
+                db: db.clone(),
+                db_path: db_path.clone(),
                 embedding_engine,
                 llm_engine,
                 search_engine,
             };
             
             app.manage(state);
+            
+            // Initialize updater module
+            let updater_config = UpdaterConfig {
+                endpoint: std::env::var("LIKHO_UPDATE_ENDPOINT")
+                    .unwrap_or_else(|_| "https://releases.likho.app/updates.json".to_string()),
+                check_on_startup: true,
+                startup_delay_secs: 60, // Check after 1 minute
+                auto_install: false,
+            };
+            updater::init(&app_handle, updater_config)?;
+            
+            // Initialize auto-backup state
+            app.manage(crate::commands::backup::AutoBackupState::new());
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -105,6 +130,26 @@ pub fn run() {
             commands::ai_complete_text,
             commands::ai_improve_text,
             commands::download_ai_model,
+            crate::commands::updater::check_update,
+            crate::commands::updater::install_update,
+            crate::commands::updater::skip_version_cmd,
+            crate::commands::updater::get_update_status,
+            crate::commands::updater::get_download_progress,
+            crate::commands::updater::get_current_update_info,
+            crate::commands::updater::dismiss_update,
+            // Backup commands
+            crate::commands::backup::get_database_path,
+            crate::commands::backup::export_database,
+            crate::commands::backup::preview_restore,
+            crate::commands::backup::execute_restore,
+            crate::commands::backup::verify_backup_integrity,
+            crate::commands::backup::list_backups,
+            crate::commands::backup::delete_backup,
+            crate::commands::backup::get_auto_backup_settings,
+            crate::commands::backup::set_auto_backup_settings,
+            crate::commands::backup::get_auto_backup_status,
+            crate::commands::backup::trigger_auto_backup,
+            crate::commands::backup::cleanup_old_backups,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

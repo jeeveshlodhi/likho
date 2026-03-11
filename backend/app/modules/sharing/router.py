@@ -1,9 +1,12 @@
 """
 API endpoints for sharing and permissions.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_active_user
@@ -16,7 +19,9 @@ from app.modules.sharing.schemas import (
     ShareLinkCreate,
     ShareLinkResponse,
     SharedPageResponse,
+    ShareLinkUpdate,
 )
+from app.modules.collaboration.crud import log_activity
 
 router = APIRouter()
 
@@ -33,6 +38,7 @@ def share_page(
     page = workspace_crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
+    
     workspace = workspace_crud.get_workspace(db, page.workspace_id)
     if not workspace or workspace.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to share this page")
@@ -45,13 +51,28 @@ def share_page(
     if target_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot share with yourself")
 
-    perm = crud.share_with_user(db, page_id, target_user.id, data.role, current_user.id)
+    # Parse expires_at if provided
+    expires_at = None
+    if data.expires_at:
+        expires_at = datetime.fromisoformat(data.expires_at.replace('Z', '+00:00'))
+
+    perm = crud.share_with_user(
+        db, page_id, target_user.id, data.role, current_user.id, expires_at
+    )
+    
+    # Log activity
+    log_activity(db, page_id, current_user.id, "share", {
+        "target_user_id": str(target_user.id),
+        "role": data.role
+    })
+    
     return {
         "id": perm.id,
         "page_id": perm.page_id,
         "user_id": perm.user_id,
         "role": perm.role.value if hasattr(perm.role, "value") else perm.role,
         "granted_by": perm.granted_by,
+        "expires_at": perm.expires_at,
         "created_at": perm.created_at,
         "user_email": target_user.email,
         "user_name": target_user.full_name,
@@ -84,10 +105,17 @@ def remove_permission(
     page = workspace_crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
+    
     workspace = workspace_crud.get_workspace(db, page.workspace_id)
     if not workspace or workspace.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
     crud.remove_permission(db, page_id, user_id)
+    
+    # Log activity
+    log_activity(db, page_id, current_user.id, "unshare", {
+        "target_user_id": str(user_id)
+    })
 
 
 @router.post("/pages/{page_id}/share-link", response_model=ShareLinkResponse)
@@ -101,15 +129,114 @@ def create_share_link(
     page = workspace_crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
+    
     workspace = workspace_crud.get_workspace(db, page.workspace_id)
     if not workspace or workspace.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    link = crud.create_share_link(db, page_id, data.role, current_user.id)
+
+    # Parse settings
+    expires_at = None
+    if data.expires_at:
+        expires_at = datetime.fromisoformat(data.expires_at.replace('Z', '+00:00'))
+
+    link = crud.create_share_link(
+        db=db,
+        page_id=page_id,
+        role=data.role,
+        created_by=current_user.id,
+        expires_at=expires_at,
+        max_views=data.max_views,
+        require_email=data.require_email,
+        allow_comments=data.allow_comments,
+        allow_export=data.allow_export
+    )
+    
+    # Log activity
+    log_activity(db, page_id, current_user.id, "create_share_link", {
+        "role": data.role,
+        "expires_at": str(expires_at) if expires_at else None
+    })
+    
     return link
 
 
+@router.get("/pages/{page_id}/share-links", response_model=list[ShareLinkResponse])
+def list_share_links(
+    page_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List all share links for a page."""
+    page = workspace_crud.get_page(db, page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+    
+    workspace = workspace_crud.get_workspace(db, page.workspace_id)
+    if not workspace or workspace.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    links = crud.get_page_share_links(db, page_id)
+    return links
+
+
+@router.patch("/share-links/{link_id}", response_model=ShareLinkResponse)
+def update_share_link(
+    link_id: UUID,
+    data: ShareLinkUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Update a share link."""
+    from app.modules.sharing.models import ShareLink
+    
+    link = db.query(ShareLink).filter(ShareLink.id == link_id).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Share link not found")
+    
+    # Verify ownership
+    page = workspace_crud.get_page(db, link.page_id)
+    workspace = workspace_crud.get_workspace(db, page.workspace_id)
+    if not workspace or workspace.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    expires_at = None
+    if data.expires_at:
+        expires_at = datetime.fromisoformat(data.expires_at.replace('Z', '+00:00'))
+    
+    updated = crud.update_share_link(
+        db, link_id, data.role, expires_at, data.max_views
+    )
+    return updated
+
+
+@router.delete("/share-links/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_share_link(
+    link_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Revoke a share link."""
+    from app.modules.sharing.models import ShareLink
+    
+    link = db.query(ShareLink).filter(ShareLink.id == link_id).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Share link not found")
+    
+    # Verify ownership
+    page = workspace_crud.get_page(db, link.page_id)
+    workspace = workspace_crud.get_workspace(db, page.workspace_id)
+    if not workspace or workspace.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    crud.revoke_share_link(db, link_id, current_user.id)
+
+
 @router.get("/shared/{token}", response_model=SharedPageResponse)
-def get_shared_page(token: str, db: Session = Depends(get_db)):
+def get_shared_page(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Access a page via a public share link (no auth required)."""
     link = crud.get_share_link(db, token)
     if not link:
@@ -119,9 +246,9 @@ def get_shared_page(token: str, db: Session = Depends(get_db)):
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    # Increment view count
-    link.view_count += 1
-    db.commit()
+    # Record view
+    client_ip = request.client.host if request.client else None
+    crud.record_share_link_view(db, link, client_ip)
 
     return SharedPageResponse(
         id=page.id,
@@ -130,6 +257,21 @@ def get_shared_page(token: str, db: Session = Depends(get_db)):
         cover_url=page.cover_url,
         content=page.content,
         role=link.role.value if hasattr(link.role, "value") else link.role,
+        allow_comments=link.allow_comments,
+        allow_export=link.allow_export,
         created_at=page.created_at,
         updated_at=page.updated_at,
     )
+
+
+@router.get("/pages/{page_id}/my-role")
+def get_my_page_role(
+    page_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get current user's role for a specific page."""
+    role = crud.get_user_role(db, current_user.id, page_id)
+    if not role:
+        raise HTTPException(status_code=403, detail="No access to this page")
+    return {"role": role}

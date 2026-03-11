@@ -97,3 +97,73 @@ pub struct TopicGroup {
     pub note_titles: Vec<String>,
     pub similarity_score: f64,
 }
+
+// ─── Backup System Models ───────────────────────────────────────────────────
+
+/// Metadata stored with each backup
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackupMetadata {
+    pub version: String,
+    pub created_at: DateTime<Utc>,
+    pub original_size: u64,
+    pub compressed_size: u64,
+    pub format: String,
+    pub checksum: String,
+    pub include_embeddings: bool,
+    pub app_version: String,
+}
+
+/// Information about a backup file
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackupInfo {
+    pub path: String,
+    pub filename: String,
+    pub size: u64,
+    pub created_at: DateTime<Utc>,
+    pub metadata: Option<BackupMetadata>,
+}
+
+/// Preview of restore operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RestorePreview {
+    pub backup_date: DateTime<Utc>,
+    pub original_size: u64,
+    pub format: String,
+    pub version: String,
+    pub warnings: Vec<String>,
+}
+
+/// Request to export database
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportBackupRequest {
+    pub target_path: String,
+    pub format: String,
+    pub include_embeddings: bool,
+}
+
+/// Request to import database
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportBackupRequest {
+    pub source_path: String,
+}
+
+/// Auto-backup settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoBackupSettings {
+    pub enabled: bool,
+    pub frequency: String, // "daily", "weekly", "monthly"
+    pub backup_dir: String,
+    pub max_backups: i32,
+    pub include_embeddings: bool,
+    pub format: String,
+}
+
+/// Auto-backup status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoBackupStatus {
+    pub enabled: bool,
+    pub last_backup: Option<DateTime<Utc>>,
+    pub next_backup: Option<DateTime<Utc>>,
+    pub backups_count: i32,
+    pub total_size: u64,
+}

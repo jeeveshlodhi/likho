@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import get_current_active_user
 from app.core.database import get_db
+from app.dependencies.rate_limit import rate_limit_ai
 from app.modules.users.models import User
 from sqlalchemy.orm import Session
 
@@ -40,6 +41,7 @@ router = APIRouter()
 async def write_assist(
     req: WriteAssistRequest,
     current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
 ):
     """Cloud AI writing assistance — improve, expand, summarise, continue, etc."""
     try:
@@ -62,6 +64,7 @@ async def write_assist(
 async def suggest_tags(
     req: SuggestTagsRequest,
     current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
 ):
     """Suggest semantic tags for a note using Claude."""
     try:
@@ -83,6 +86,7 @@ async def suggest_tags(
 async def meeting_extract(
     req: MeetingExtractRequest,
     current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
 ):
     """Extract structured insights from meeting notes."""
     try:
@@ -103,6 +107,7 @@ async def meeting_extract(
 async def classify_temp_note(
     req: ClassifyTempNoteRequest,
     current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
 ):
     """Classify a temp note using a stronger cloud model."""
     try:
@@ -124,6 +129,7 @@ def health_report(
     workspace_id: str = Query(..., description="Workspace UUID"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_ai),
 ):
     """Rule-based workspace health scan — stale, orphan, incomplete pages."""
     try:
@@ -140,6 +146,7 @@ async def suggest_links(
     req: SuggestLinksRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_ai),
 ):
     """Suggest related notes to link from the current note using Claude."""
     try:
@@ -164,6 +171,7 @@ async def rag_query(
     req: RagQueryRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_ai),
 ):
     """Answer a question grounded in the user's workspace notes."""
     try:
@@ -187,6 +195,7 @@ async def generate_digest(
     req: DigestRequest,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_ai),
 ):
     """Generate a digest summary of recent workspace activity."""
     try:
@@ -209,6 +218,7 @@ async def journal_insights(
     workspace_id: str = Query(..., description="Workspace UUID"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit_ai),
 ):
     """Analyse journal entries — themes, sentiment trend, reflection prompt."""
     try:

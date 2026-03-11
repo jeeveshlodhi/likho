@@ -1,6 +1,8 @@
 """
 Shared dependencies for FastAPI endpoints.
 """
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -59,3 +61,30 @@ def get_current_active_user(
             detail="Account has been deleted",
         )
     return current_user
+
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Decode JWT token and return the authenticated user if available.
+    
+    Unlike get_current_user, this doesn't raise an exception if token is missing or invalid.
+    Returns None instead, allowing endpoints to support both authenticated and anonymous access.
+    """
+    if not token:
+        return None
+    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: Optional[str] = payload.get("sub")
+        if user_id is None:
+            return None
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    return user

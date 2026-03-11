@@ -1,3 +1,7 @@
+// Tauri commands module
+//
+// This module exports all command handlers for the Tauri application.
+
 use tauri::State;
 use crate::AppState;
 use crate::models::{
@@ -8,6 +12,10 @@ use crate::chunking::TextChunker;
 use crate::rag::RagPipeline;
 use crate::llm::{LlmConfig, ModelInfo};
 use uuid::Uuid;
+
+// Submodules
+pub mod updater;
+pub mod backup;
 
 /// Search notes using hybrid retrieval (vector + keyword)
 #[tauri::command]

@@ -4,11 +4,13 @@ Pydantic schemas for sharing and permissions.
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from datetime import datetime
+from typing import Optional
 
 
 class ShareRequest(BaseModel):
     email: EmailStr
-    role: str = "viewer"  # viewer, editor, commenter
+    role: str = "viewer"  # viewer, commenter, editor, admin
+    expires_at: Optional[str] = None  # ISO datetime string
 
 
 class PermissionResponse(BaseModel):
@@ -17,6 +19,7 @@ class PermissionResponse(BaseModel):
     user_id: UUID | None
     role: str
     granted_by: UUID | None
+    expires_at: datetime | None
     created_at: datetime
     # Populated user info
     user_email: str | None = None
@@ -27,6 +30,17 @@ class PermissionResponse(BaseModel):
 
 class ShareLinkCreate(BaseModel):
     role: str = "viewer"
+    expires_at: Optional[str] = None  # ISO datetime string
+    max_views: Optional[int] = None
+    require_email: bool = False
+    allow_comments: bool = True
+    allow_export: bool = True
+
+
+class ShareLinkUpdate(BaseModel):
+    role: Optional[str] = None
+    expires_at: Optional[str] = None
+    max_views: Optional[int] = None
 
 
 class ShareLinkResponse(BaseModel):
@@ -35,8 +49,13 @@ class ShareLinkResponse(BaseModel):
     token: str
     role: str
     view_count: int
+    max_views: Optional[int]
+    require_email: bool
+    allow_comments: bool
+    allow_export: bool
     expires_at: datetime | None
     created_at: datetime
+    revoked_at: datetime | None
 
     model_config = {"from_attributes": True}
 
@@ -48,5 +67,13 @@ class SharedPageResponse(BaseModel):
     cover_url: str | None = None
     content: dict | list | None = None
     role: str  # The role granted by the share link
+    allow_comments: bool = True
+    allow_export: bool = True
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PageRoleResponse(BaseModel):
+    role: str

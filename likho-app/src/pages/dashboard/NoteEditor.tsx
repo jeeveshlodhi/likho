@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 
 // Helper function to safely parse note content for BlockNote
@@ -18,7 +18,6 @@ function getInitialContent(content: any): any[] | undefined {
         return parsed;
       }
     } catch {
-      // If parsing fails, return undefined to let BlockNote use defaults
       return undefined;
     }
   }
@@ -39,6 +38,7 @@ function getInitialContent(content: any): any[] | undefined {
   
   return undefined;
 }
+
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/shadcn';
 import {
@@ -50,7 +50,7 @@ import {
   SuggestionMenuController,
 } from "@blocknote/react";
 import '@blocknote/shadcn/style.css';
-import { Sparkles, Share2, Hash, Link2 } from 'lucide-react';
+import { Sparkles, Share2, Hash, Link2, MessageSquare, Eye } from 'lucide-react';
 import { AskAIBlock } from '@/components/dashboard/editor/AskAIBlock';
 import { WikilinkBlock } from '@/components/dashboard/editor/WikilinkBlock';
 import { TagBlock } from '@/components/dashboard/editor/TagBlock';
@@ -59,16 +59,18 @@ import { RightSidebar } from '@/components/ai';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useLinkStore } from '@/store/linkStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { useCollaboration, usePageComments } from '@/hooks/useCollaboration';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import NoteHeader from '@/components/dashboard/NoteHeader';
 import NoteExportActions from '@/components/dashboard/NoteExportActions';
 import CollaboratorAvatars from '@/components/dashboard/CollaboratorAvatars';
 import ShareModal from '@/components/dashboard/ShareModal';
-import { useAuthStore } from '@/store/authStore';
-import { createCollaborationProvider, destroyCollaborationProvider } from '@/lib/collaboration';
+import { CommentThread } from '@/components/dashboard/CommentThread';
 import { useTheme } from '@/providers/ThemeProvider';
 import { buildWikilink } from '@/lib/linkParser';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function isUuid(s: string) {
@@ -155,53 +157,48 @@ export default function NoteEditor() {
   const { notes, folders, setActiveNote } = useWorkspaceStore();
   const { scanNoteForLinks } = useLinkStore();
   const { theme } = useTheme();
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const user = useAuthStore((s) => s.user);
-  const userName = user?.full_name || user?.email || 'Anonymous';
-  const prevCollabRef = useRef<ReturnType<typeof createCollaborationProvider> | null>(null);
+  
   const [shareOpen, setShareOpen] = useState(false);
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [linkQuery, setLinkQuery] = useState('');
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
 
-  const note = useMemo(() => notes.find((n) => n.id === noteId), [notes, noteId]);
+  const note = notes.find((n) => n.id === noteId);
+  
+  // Check if collaboration should be enabled
+  const isOnline = note?.spaceType === 'online';
+  const canCollab = isOnline && noteId && isUuid(noteId);
+  
+  // Use the new collaboration hook with permission awareness
+  const { 
+    provider, 
+    isConnected, 
+    isReadOnly, 
+    canComment, 
+    users,
+    error 
+  } = useCollaboration({
+    pageId: noteId || '',
+    enabled: canCollab,
+  });
 
-  const collabSession = useMemo(() => {
-    if (prevCollabRef.current) {
-      destroyCollaborationProvider(prevCollabRef.current);
-      prevCollabRef.current = null;
-    }
-    const isOnline = note?.spaceType === 'online';
-    const canCollab = isOnline && noteId && accessToken && isUuid(noteId);
-    if (!canCollab) return null;
-    const session = createCollaborationProvider(noteId!, accessToken, userName);
-    prevCollabRef.current = session;
-    return session;
-  }, [note?.spaceType, noteId, accessToken, userName]);
-
-  useEffect(() => {
-    return () => {
-      if (prevCollabRef.current) {
-        destroyCollaborationProvider(prevCollabRef.current);
-        prevCollabRef.current = null;
-      }
-      // Clear link scanning timeout on unmount
-      if (linkScanTimeoutRef.current) {
-        clearTimeout(linkScanTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Get comments
+  const { comments } = usePageComments(canCollab ? noteId : undefined);
 
   const save = useAutoSave(noteId || '');
 
   const editor = useCreateBlockNote({
     schema,
-    initialContent: collabSession ? undefined : getInitialContent(note?.content),
-    collaboration: collabSession
+    initialContent: provider ? undefined : getInitialContent(note?.content),
+    collaboration: provider
       ? {
-          provider: collabSession.provider,
-          fragment: collabSession.doc.getXmlFragment('document-store'),
-          user: collabSession.user,
+          provider,
+          fragment: provider.doc.getXmlFragment('document-store'),
+          user: {
+            name: note?.user?.full_name || note?.user?.email || 'You',
+            color: '#4ECDC4',
+          },
           showCursorLabels: 'activity' as const,
         }
       : undefined,
@@ -239,12 +236,12 @@ export default function NoteEditor() {
     if (noteId) setActiveNote(noteId);
   }, [noteId, setActiveNote]);
 
-  // Update editor content when note changes
+  // Update editor content when note changes (only if not in collaboration mode)
   useEffect(() => {
     if (!editor || !note) return;
     
     // Only update if this is not a collaboration session
-    if (collabSession) return;
+    if (provider) return;
     
     const content = getInitialContent(note.content);
     if (content) {
@@ -254,7 +251,7 @@ export default function NoteEditor() {
       // If no content, clear to a single empty paragraph
       editor.replaceBlocks(editor.document, [{ type: 'paragraph' }]);
     }
-  }, [note?.id, editor, collabSession]);
+  }, [note?.id, editor, provider]);
 
   useEffect(() => {
     if (!note && noteId) {
@@ -292,9 +289,30 @@ export default function NoteEditor() {
       <div className="flex items-center justify-between border-b border-border px-6 py-2">
         <div className="flex items-center gap-3">
           <Breadcrumb note={note} />
-          {collabSession && (
-            <CollaboratorAvatars provider={collabSession.provider} />
+          
+          {/* Collaboration Status */}
+          {provider && (
+            <>
+              <CollaboratorAvatars provider={provider} />
+              
+              {/* Read-only indicator for viewers */}
+              {isReadOnly && (
+                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                  <Eye size={12} />
+                  View only
+                </div>
+              )}
+              
+              {/* Connection error */}
+              {error && (
+                <span className="text-xs text-destructive">
+                  Connection error
+                </span>
+              )}
+            </>
           )}
+          
+          {/* Share button */}
           {note.spaceType === 'online' && isUuid(note.id) && (
             <button
               type="button"
@@ -306,7 +324,21 @@ export default function NoteEditor() {
               Share
             </button>
           )}
+          
+          {/* Comments button */}
+          {canComment && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+              className={cn("gap-1.5", showComments && "bg-accent")}
+            >
+              <MessageSquare size={16} />
+              {comments.length > 0 && <span>{comments.length}</span>}
+            </Button>
+          )}
         </div>
+        
         <div className="flex items-center gap-2">
           {editor && <NoteExportActions editor={editor} note={note} />}
         </div>
@@ -322,6 +354,7 @@ export default function NoteEditor() {
       )}
 
       <div className="flex-1 flex overflow-hidden">
+        {/* Main Editor */}
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-4xl pb-8">
             <NoteHeader note={note} />
@@ -331,11 +364,20 @@ export default function NoteEditor() {
             </div>
 
             <div className="min-h-[60vh] mt-4 px-4 sm:px-8 relative">
+              {/* Read-only overlay for viewers */}
+              {isReadOnly && (
+                <div className="absolute inset-0 z-10 bg-background/50 pointer-events-none" />
+              )}
+              
               <BlockNoteView
                 editor={editor}
                 slashMenu={false}
+                editable={!isReadOnly}
                 onChange={() => {
-                  if (!collabSession) save({ content: editor.document });
+                  // Only save if not in read-only mode and not in collaboration
+                  if (!isReadOnly && !provider) {
+                    save({ content: editor.document });
+                  }
                   
                   // Debounced link scanning
                   if (linkScanTimeoutRef.current) {
@@ -380,37 +422,47 @@ export default function NoteEditor() {
           </div>
         </div>
         
-        {/* Right Sidebar — shared component */}
-        <RightSidebar
-          note={note}
-          contentText={
-            editor
-              ? editor.document
-                  .flatMap((b: any) => b.content ?? [])
-                  .filter((c: any) => c.type === 'text')
-                  .map((c: any) => c.text)
-                  .join(' ')
-              : ''
-          }
-          getSelectedText={() => {
-            if (!editor) return '';
-            return editor.document
-              .flatMap((b: any) => b.content ?? [])
-              .filter((c: any) => c.type === 'text')
-              .map((c: any) => c.text)
-              .join(' ');
-          }}
-          onApplyText={(text) => {
-            if (!editor) return;
-            const block = editor.getTextCursorPosition().block;
-            editor.insertBlocks(
-              [{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }],
-              block,
-              'after'
-            );
-          }}
-          onApplyTitle={(title) => save({ title })}
-        />
+        {/* Right Sidebar */}
+        {!showComments ? (
+          <RightSidebar
+            note={note}
+            contentText={
+              editor
+                ? editor.document
+                    .flatMap((b: any) => b.content ?? [])
+                    .filter((c: any) => c.type === 'text')
+                    .map((c: any) => c.text)
+                    .join(' ')
+                : ''
+            }
+            getSelectedText={() => {
+              if (!editor) return '';
+              return editor.document
+                .flatMap((b: any) => b.content ?? [])
+                .filter((c: any) => c.type === 'text')
+                .map((c: any) => c.text)
+                .join(' ');
+            }}
+            onApplyText={(text) => {
+              if (!editor) return;
+              const block = editor.getTextCursorPosition().block;
+              editor.insertBlocks(
+                [{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }],
+                block,
+                'after'
+              );
+            }}
+            onApplyTitle={(title) => save({ title })}
+          />
+        ) : (
+          <div className="w-80 border-l border-border bg-background overflow-y-auto">
+            <CommentThread 
+              pageId={noteId!}
+              canComment={canComment}
+              canResolve={!isReadOnly}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
