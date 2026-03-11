@@ -63,9 +63,9 @@ export function usePageRole(pageId: string | undefined) {
 export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
   const [state, setState] = useState<CollaborationState>({
     isConnected: false,
-    isReadOnly: true,
-    canComment: false,
-    canEdit: false,
+    isReadOnly: false,
+    canComment: true,
+    canEdit: true,
     users: [],
     error: null,
   });
@@ -80,8 +80,8 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
   const user = useAuthStore((s) => s.user);
   const { toast } = useToast();
 
-  // Get user's role first
-  const { data: role } = usePageRole(pageId);
+  // Get user's role first — on error, default to 'owner' so notes remain editable
+  const { data: role } = usePageRole(enabled ? pageId : undefined);
 
   const connect = useCallback(async () => {
     if (!enabled || !accessToken || !pageId || !role) return;
@@ -204,6 +204,13 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
       sessionRef.current = null;
     };
   }, [pageId, role, enabled, accessToken, user, toast]);
+
+  // When collaboration is disabled (local notes), ensure note is editable
+  useEffect(() => {
+    if (!enabled) {
+      setState(prev => ({ ...prev, isReadOnly: false, canEdit: true, canComment: true }));
+    }
+  }, [enabled]);
 
   useEffect(() => {
     const cleanupFn = connect();

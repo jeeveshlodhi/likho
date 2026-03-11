@@ -10,7 +10,6 @@ use std::time::Instant;
 /// RAG pipeline orchestrator
 /// Coordinates search, retrieval, and generation
 pub struct RagPipeline {
-    db: Arc<Database>,
     embedding_engine: Arc<RwLock<EmbeddingEngine>>,
     llm_engine: Arc<RwLock<LlmEngine>>,
     search_engine: Arc<SearchEngine>,
@@ -18,13 +17,12 @@ pub struct RagPipeline {
 
 impl RagPipeline {
     pub fn new(
-        db: Arc<Database>,
+        _db: Arc<Database>,
         embedding_engine: Arc<RwLock<EmbeddingEngine>>,
         llm_engine: Arc<RwLock<LlmEngine>>,
         search_engine: Arc<SearchEngine>,
     ) -> Self {
         Self {
-            db,
             embedding_engine,
             llm_engine,
             search_engine,
