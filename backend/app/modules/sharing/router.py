@@ -19,6 +19,7 @@ from app.modules.sharing.schemas import (
     ShareLinkCreate,
     ShareLinkResponse,
     SharedPageResponse,
+    SharedPageUpdate,
     ShareLinkUpdate,
 )
 from app.modules.collaboration.crud import log_activity
@@ -257,6 +258,47 @@ def get_shared_page(
         cover_url=page.cover_url,
         content=page.content,
         role=link.role.value if hasattr(link.role, "value") else link.role,
+        allow_comments=link.allow_comments,
+        allow_export=link.allow_export,
+        created_at=page.created_at,
+        updated_at=page.updated_at,
+    )
+
+
+@router.patch("/shared/{token}", response_model=SharedPageResponse)
+def update_shared_page(
+    token: str,
+    data: SharedPageUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update page content via a share link (editor+ roles only, no auth required)."""
+    link = crud.get_share_link(db, token)
+    if not link:
+        raise HTTPException(status_code=404, detail="Share link not found or expired")
+
+    link_role = link.role.value if hasattr(link.role, "value") else link.role
+    if link_role not in ("editor", "admin", "owner"):
+        raise HTTPException(status_code=403, detail="This link does not allow editing")
+
+    page = workspace_crud.get_page(db, link.page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    if data.content is not None:
+        page.content = data.content
+    if data.title is not None:
+        page.title = data.title
+    page.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(page)
+
+    return SharedPageResponse(
+        id=page.id,
+        title=page.title,
+        icon=page.icon,
+        cover_url=page.cover_url,
+        content=page.content,
+        role=link_role,
         allow_comments=link.allow_comments,
         allow_export=link.allow_export,
         created_at=page.created_at,

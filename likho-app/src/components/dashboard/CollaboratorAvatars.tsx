@@ -100,9 +100,9 @@ export default function CollaboratorAvatars({ provider, maxVisible = 3 }: Collab
                 )}>
                   {ROLE_BADGES[user.role]?.label || 'Viewing'}
                 </span>
-                {user.cursor && (
+                {user.cursor?.blockId && (
                   <p className="text-xs text-muted-foreground">
-                    Editing block {user.cursor.blockId.slice(0, 8)}...
+                    Editing block {user.cursor.blockId.slice(0, 8)}…
                   </p>
                 )}
               </TooltipContent>

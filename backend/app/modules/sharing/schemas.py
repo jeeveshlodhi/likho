@@ -60,6 +60,11 @@ class ShareLinkResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SharedPageUpdate(BaseModel):
+    content: dict | list | None = None
+    title: str | None = None
+
+
 class SharedPageResponse(BaseModel):
     id: UUID
     title: str

@@ -135,7 +135,7 @@ class CollaborationLog(Base):
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     action = Column(Text, nullable=False)
-    meta_data = Column(JSON, default=dict)
+    meta_data = Column("metadata", JSON, default=dict)
     update_size = Column(Integer, nullable=True)
     
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)

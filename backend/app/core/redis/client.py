@@ -2,6 +2,7 @@
 Redis client configuration for collaboration and caching.
 """
 import redis.asyncio as redis
+from datetime import datetime
 from app.core.config import settings
 
 # Global Redis client
@@ -53,7 +54,7 @@ class RedisRoomManager:
             "user_id": user_id,
             "room_id": room_id,
             "role": role,
-            "joined_at": str(redis.utils.datetime.now().timestamp())
+            "joined_at": str(datetime.now().timestamp())
         })
         pipe.expire(conn_key, 3600)  # 1 hour TTL
         
@@ -121,7 +122,7 @@ class RedisRoomManager:
     async def update_activity(self, connection_id: str):
         """Update last activity timestamp."""
         conn_key = f"conn:{connection_id}"
-        await self.redis.hset(conn_key, "last_activity", str(redis.utils.datetime.now().timestamp()))
+        await self.redis.hset(conn_key, "last_activity", str(datetime.now().timestamp()))
     
     async def cleanup_stale_connections(self, max_idle_seconds: int = 300):
         """Remove connections that haven't been active."""

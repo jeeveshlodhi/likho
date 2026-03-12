@@ -29,6 +29,11 @@ from app.dependencies.rate_limit import get_websocket_rate_limiter
 
 logger = logging.getLogger(__name__)
 
+# Track active (accepted) WebSocket connections per IP — resets with every process restart.
+# This is intentionally a plain dict (not Redis) so a server restart always clears it.
+_active_ws_connections: dict[str, int] = {}
+MAX_WS_CONNECTIONS_PER_IP = 10
+
 
 class PermissionLevel(IntEnum):
     VIEWER = 0
@@ -393,75 +398,112 @@ async def get_or_create_room(page_id: str) -> YjsRoom:
 
 
 async def collab_websocket_v2(
-    websocket: WebSocket, 
+    websocket: WebSocket,
     page_id: str,
     user_agent: Optional[str] = None
 ):
     """
     Enhanced WebSocket handler with permission enforcement and rate limiting.
-    
+
+    Supports two auth paths:
+    1. JWT auth (authenticated users): ?token= or Authorization: Bearer header
+    2. Share-token auth (anonymous editors): ?share_token= query param
+       — validates the token against share_links, requires editor/admin/owner role
+
     Protocol:
-    1. Client connects with JWT in Authorization header
+    1. Client connects with auth credentials
     2. Server validates auth and page permissions
     3. Server sends current Yjs state vector
     4. Binary messages are Yjs updates (editors only)
     5. JSON messages are control messages (comments, awareness, etc)
     """
-    # Extract token from header (preferred) or query param
-    token = ""
-    auth_header = websocket.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header[7:]
-    else:
-        token = websocket.query_params.get("token", "")
-    
     # Get client IP
     client_ip = websocket.client.host if websocket.client else "unknown"
     forwarded_for = websocket.headers.get("X-Forwarded-For")
     if forwarded_for:
         client_ip = forwarded_for.split(",")[0].strip()
-    
-    # Rate limit: Check connection limit per IP
-    ws_rate_limiter = get_websocket_rate_limiter(
-        max_connections=10,  # Max 10 concurrent connections per IP
-        message_rate=100,     # 100 messages per minute
-        window=60
-    )
-    
-    if not await ws_rate_limiter.check_connection_allowed(client_ip):
-        logger.warning(f"WebSocket connection rate limit exceeded for IP: {client_ip}")
+
+    # Check active connection limit per IP using in-process tracking.
+    current_connections = _active_ws_connections.get(client_ip, 0)
+    if current_connections >= MAX_WS_CONNECTIONS_PER_IP:
+        logger.warning(f"Too many active WebSocket connections for IP: {client_ip} ({current_connections})")
         await websocket.close(code=4008, reason="Too many connections from this IP")
         return
-    
-    # Authenticate
-    user_id = authenticate_ws(token)
-    if not user_id:
-        await websocket.close(code=4001, reason="Invalid authentication")
-        return
-    
-    # Check permissions
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            await websocket.close(code=4001, reason="User not found")
+
+    # Message-rate limiter (only applies after connection is accepted)
+    ws_rate_limiter = get_websocket_rate_limiter(
+        max_connections=MAX_WS_CONNECTIONS_PER_IP,
+        message_rate=200,
+        window=60
+    )
+
+    ctx: Optional[PermissionContext] = None
+
+    # ── Auth path 1: share_token (anonymous editor via share link) ────────────
+    share_token = websocket.query_params.get("share_token", "")
+    if share_token:
+        from app.modules.sharing.crud import get_share_link as _get_share_link
+        db = SessionLocal()
+        try:
+            link = _get_share_link(db, share_token)
+            if not link:
+                await websocket.close(code=4003, reason="Invalid or expired share link")
+                return
+
+            # Ensure the token actually grants access to this specific page
+            if str(link.page_id) != page_id:
+                await websocket.close(code=4003, reason="Share link does not match this page")
+                return
+
+            link_role = link.role.value if hasattr(link.role, "value") else str(link.role)
+            if link_role not in ("editor", "admin", "owner"):
+                await websocket.close(code=4003, reason="Share link does not grant edit access")
+                return
+
+            # Derive a deterministic synthetic user_id from the token so the
+            # same link always maps to the same "user" in the room.
+            synthetic_user_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"share_token:{share_token}")
+            level = get_permission_level(link_role)
+            ctx = PermissionContext(synthetic_user_id, level, link_role)
+            logger.info(f"Share-token auth for page {page_id}, role={link_role}")
+        finally:
+            db.close()
+
+    # ── Auth path 2: JWT (authenticated users) ────────────────────────────────
+    if ctx is None:
+        token = ""
+        auth_header = websocket.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        else:
+            token = websocket.query_params.get("token", "")
+
+        user_id = authenticate_ws(token)
+        if not user_id:
+            await websocket.close(code=4001, reason="Invalid authentication")
             return
-        
-        has_access, role = check_page_access(db, user_id, uuid.UUID(page_id))
-        if not has_access:
-            await websocket.close(code=4003, reason="Access denied to this page")
-            return
-        
-        # Create permission context
-        level = get_permission_level(role)
-        ctx = PermissionContext(user_id, level, role)
-        
-    finally:
-        db.close()
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                await websocket.close(code=4001, reason="User not found")
+                return
+
+            has_access, role = check_page_access(db, user_id, uuid.UUID(page_id))
+            if not has_access:
+                await websocket.close(code=4003, reason="Access denied to this page")
+                return
+
+            level = get_permission_level(role)
+            ctx = PermissionContext(user_id, level, role)
+        finally:
+            db.close()
     
     # Accept connection
     await websocket.accept()
-    
+    _active_ws_connections[client_ip] = _active_ws_connections.get(client_ip, 0) + 1
+
     # Get room
     room = await get_or_create_room(page_id)
     connection_id = str(uuid.uuid4())
@@ -520,6 +562,12 @@ async def collab_websocket_v2(
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
+        # Decrement active connection count for this IP
+        if client_ip in _active_ws_connections:
+            _active_ws_connections[client_ip] = max(0, _active_ws_connections[client_ip] - 1)
+            if _active_ws_connections[client_ip] == 0:
+                del _active_ws_connections[client_ip]
+
         remaining = await room.leave(connection_id)
         if remaining == 0:
             # Cleanup room

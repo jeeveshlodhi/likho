@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import type { WebsocketProvider } from 'y-websocket';
 
 // Helper function to safely parse note content for BlockNote
 function getInitialContent(content: any): any[] | undefined {
   if (!content) return undefined;
-  
+
   // If it's already an array, use it
   if (Array.isArray(content)) {
     return content.length > 0 ? content : undefined;
   }
-  
+
   // If it's a string, try to parse it
   if (typeof content === 'string') {
     try {
@@ -21,7 +22,7 @@ function getInitialContent(content: any): any[] | undefined {
       return undefined;
     }
   }
-  
+
   // If it's an object with a data property (template format), extract the blocks
   if (typeof content === 'object' && content !== null) {
     if (content.data && Array.isArray(content.data)) {
@@ -35,7 +36,7 @@ function getInitialContent(content: any): any[] | undefined {
       return content.content;
     }
   }
-  
+
   return undefined;
 }
 
@@ -110,13 +111,13 @@ const insertWikilinkBlock = (editor: typeof schema.BlockNoteEditor) => ({
   onItemClick: () => {
     const currentBlock = editor.getTextCursorPosition().block;
     editor.insertBlocks(
-      [{ 
-        type: "wikilink", 
-        props: { 
+      [{
+        type: "wikilink",
+        props: {
           target: "New Link",
           displayText: "New Link",
           resolved: false,
-        } 
+        }
       }],
       currentBlock,
       "after"
@@ -134,12 +135,12 @@ const insertTagBlock = (editor: typeof schema.BlockNoteEditor) => ({
   onItemClick: () => {
     const currentBlock = editor.getTextCursorPosition().block;
     editor.insertBlocks(
-      [{ 
-        type: "tag", 
-        props: { 
+      [{
+        type: "tag",
+        props: {
           tagName: "new-tag",
           color: "#f59e0b",
-        } 
+        }
       }],
       currentBlock,
       "after"
@@ -151,45 +152,49 @@ const insertTagBlock = (editor: typeof schema.BlockNoteEditor) => ({
   subtext: "Add a tag",
 });
 
-export default function NoteEditor() {
-  const { noteId } = useParams<{ noteId: string }>();
-  const navigate = useNavigate();
-  const { notes, folders, setActiveNote } = useWorkspaceStore();
-  const { scanNoteForLinks } = useLinkStore();
-  const { theme } = useTheme();
-  
-  const [shareOpen, setShareOpen] = useState(false);
+// ─────────────────────────────────────────────────────────────────────────────
+// Inner component: owns the BlockNote editor instance.
+// Receives provider as a prop so useCreateBlockNote gets the correct
+// collaboration config on its very first call.
+// Re-mounts (via key) when provider availability changes, ensuring BlockNote
+// always sees the right config from mount time.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NoteEditorBodyProps {
+  note: any;
+  noteId: string;
+  provider: WebsocketProvider | null;
+  isReadOnly: boolean;
+  canComment: boolean;
+  canCollab: boolean;
+  users: any[];
+  error: string | null;
+  isConnected: boolean;
+  comments: any[];
+  shareOpen: boolean;
+  setShareOpen: (v: boolean) => void;
+  showComments: boolean;
+  setShowComments: (v: boolean) => void;
+  save: (updates: any) => void;
+  notes: any[];
+  folders: any[];
+  scanNoteForLinks: (note: any, notes: any[], folders: any[]) => void;
+}
+
+function NoteEditorBody({
+  note, noteId, provider, isReadOnly, canComment, canCollab,
+  users, error, isConnected, comments, shareOpen, setShareOpen,
+  showComments, setShowComments, save, notes, folders, scanNoteForLinks,
+}: NoteEditorBodyProps) {
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
-  const [showComments, setShowComments] = useState(false);
   const [linkQuery, setLinkQuery] = useState('');
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-
-  const note = notes.find((n) => n.id === noteId);
-  
-  // Check if collaboration should be enabled
-  const isOnline = note?.spaceType === 'online';
-  const canCollab = isOnline && noteId && isUuid(noteId);
-  
-  // Use the new collaboration hook with permission awareness
-  const { 
-    provider, 
-    isConnected, 
-    isReadOnly, 
-    canComment, 
-    users,
-    error 
-  } = useCollaboration({
-    pageId: noteId || '',
-    enabled: canCollab,
-  });
-
-  // Get comments
-  const { comments } = usePageComments(canCollab ? noteId : undefined);
-
-  const save = useAutoSave(noteId || '');
+  const { theme } = useTheme();
 
   const editor = useCreateBlockNote({
     schema,
+    // When provider is available, Yjs owns the content — don't pre-populate.
+    // When provider is null (local or pre-collab), use REST content as initial state.
     initialContent: provider ? undefined : getInitialContent(note?.content),
     collaboration: provider
       ? {
@@ -210,7 +215,7 @@ export default function NoteEditor() {
   // Handle [[ shortcut for link suggestions
   useEffect(() => {
     if (!editor) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '[' && e.ctrlKey) {
         e.preventDefault();
@@ -227,50 +232,35 @@ export default function NoteEditor() {
         }
       }
     };
-    
+
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [editor]);
 
-  useEffect(() => {
-    if (noteId) setActiveNote(noteId);
-  }, [noteId, setActiveNote]);
-
-  // Update editor content when note changes (only if not in collaboration mode)
+  // Update editor content when note changes (only if not in collaboration mode).
+  // In collab mode, Yjs drives the content — do not manually replace blocks.
   useEffect(() => {
     if (!editor || !note) return;
-    
-    // Only update if this is not a collaboration session
     if (provider) return;
-    
+
     const content = getInitialContent(note.content);
     if (content) {
-      // Replace the entire document with the new note's content
       editor.replaceBlocks(editor.document, content);
     } else {
-      // If no content, clear to a single empty paragraph
       editor.replaceBlocks(editor.document, [{ type: 'paragraph' }]);
     }
   }, [note?.id, editor, provider]);
 
-  useEffect(() => {
-    if (!note && noteId) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [note, noteId, navigate]);
-
   const handleLinkSelect = (suggestion: { id: string; title: string; type: 'note' | 'folder' }) => {
     if (!editor) return;
-    
+
     const wikilink = buildWikilink(suggestion.title);
-    
-    // Insert the wikilink as text
     editor.insertInlineContent([{
       type: "text",
       text: wikilink,
       styles: {},
     }]);
-    
+
     setShowLinkSuggestions(false);
     setLinkQuery('');
   };
@@ -281,20 +271,18 @@ export default function NoteEditor() {
       ? 'dark'
       : 'light';
 
-  if (!note) return null;
-
   return (
     <div className="flex h-full flex-col">
       {/* Breadcrumb and Actions */}
       <div className="flex items-center justify-between border-b border-border px-6 py-2">
         <div className="flex items-center gap-3">
           <Breadcrumb note={note} />
-          
+
           {/* Collaboration Status */}
           {provider && (
             <>
               <CollaboratorAvatars provider={provider} />
-              
+
               {/* Read-only indicator for viewers */}
               {isReadOnly && (
                 <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -302,7 +290,7 @@ export default function NoteEditor() {
                   View only
                 </div>
               )}
-              
+
               {/* Connection error */}
               {error && (
                 <span className="text-xs text-destructive">
@@ -311,7 +299,7 @@ export default function NoteEditor() {
               )}
             </>
           )}
-          
+
           {/* Share button */}
           {note.spaceType === 'online' && isUuid(note.id) && (
             <button
@@ -324,7 +312,7 @@ export default function NoteEditor() {
               Share
             </button>
           )}
-          
+
           {/* Comments button */}
           {canComment && (
             <Button
@@ -338,12 +326,12 @@ export default function NoteEditor() {
             </Button>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           {editor && <NoteExportActions editor={editor} note={note} />}
         </div>
       </div>
-      
+
       {note.spaceType === 'online' && (
         <ShareModal
           pageId={note.id}
@@ -368,17 +356,19 @@ export default function NoteEditor() {
               {isReadOnly && (
                 <div className="absolute inset-0 z-10 bg-background/50 pointer-events-none" />
               )}
-              
+
               <BlockNoteView
                 editor={editor}
                 slashMenu={false}
                 editable={!isReadOnly}
                 onChange={() => {
-                  // Only save if not in read-only mode and not in collaboration
-                  if (!isReadOnly && !provider) {
+                  // Always save via REST on change.
+                  // For collaborative sessions, this provides belt-and-suspenders persistence
+                  // in addition to Yjs real-time sync.
+                  if (!isReadOnly) {
                     save({ content: editor.document });
                   }
-                  
+
                   // Debounced link scanning
                   if (linkScanTimeoutRef.current) {
                     clearTimeout(linkScanTimeoutRef.current);
@@ -407,7 +397,7 @@ export default function NoteEditor() {
                   }}
                 />
               </BlockNoteView>
-              
+
               <LinkSuggestionMenu
                 query={linkQuery}
                 isOpen={showLinkSuggestions}
@@ -421,7 +411,7 @@ export default function NoteEditor() {
             </div>
           </div>
         </div>
-        
+
         {/* Right Sidebar */}
         {!showComments ? (
           <RightSidebar
@@ -457,8 +447,8 @@ export default function NoteEditor() {
           />
         ) : (
           <div className="w-80 border-l border-border bg-background overflow-y-auto">
-            <CommentThread 
-              pageId={noteId!}
+            <CommentThread
+              pageId={noteId}
               canComment={canComment}
               canResolve={!isReadOnly}
             />
@@ -466,5 +456,88 @@ export default function NoteEditor() {
         )}
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Outer component: manages collaboration state, computes the editor key,
+// and renders NoteEditorBody with the right key so it re-mounts exactly once
+// when the Yjs provider becomes available.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function NoteEditor() {
+  const { noteId } = useParams<{ noteId: string }>();
+  const navigate = useNavigate();
+  const { notes, folders, setActiveNote } = useWorkspaceStore();
+  const { scanNoteForLinks } = useLinkStore();
+
+  const note = notes.find((n) => n.id === noteId);
+
+  // Collaboration is only enabled for online notes with valid UUIDs
+  const isOnline = note?.spaceType === 'online';
+  const canCollab = !!(isOnline && noteId && isUuid(noteId));
+
+  const {
+    provider,
+    isConnected,
+    isReadOnly,
+    canComment,
+    users,
+    error
+  } = useCollaboration({
+    pageId: noteId || '',
+    enabled: canCollab,
+  });
+
+  const { comments } = usePageComments(canCollab ? noteId : undefined);
+  const save = useAutoSave(noteId || '');
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    if (noteId) setActiveNote(noteId);
+  }, [noteId, setActiveNote]);
+
+  useEffect(() => {
+    if (!note && noteId) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [note, noteId, navigate]);
+
+  if (!note) return null;
+
+  // The key controls when NoteEditorBody re-mounts:
+  // - Local notes: stable 'local-{id}' key — never re-mounts
+  // - Online notes before provider: 'static-{id}' — renders with local content + REST saves
+  // - Online notes after provider: 'collab-{id}' — re-mounts with Yjs collaboration
+  // This one-time re-mount ensures useCreateBlockNote gets the correct
+  // collaboration config on its first call in the collab phase.
+  const editorKey = canCollab
+    ? (provider ? `collab-${noteId}` : `static-${noteId}`)
+    : `local-${noteId}`;
+
+  return (
+    <NoteEditorBody
+      key={editorKey}
+      note={note}
+      noteId={noteId!}
+      provider={provider ?? null}
+      isReadOnly={isReadOnly}
+      canComment={canComment}
+      canCollab={canCollab}
+      users={users}
+      error={error ?? null}
+      isConnected={isConnected}
+      comments={comments ?? []}
+      shareOpen={shareOpen}
+      setShareOpen={setShareOpen}
+      showComments={showComments}
+      setShowComments={setShowComments}
+      save={save}
+      notes={notes}
+      folders={folders}
+      scanNoteForLinks={scanNoteForLinks}
+    />
   );
 }

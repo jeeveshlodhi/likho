@@ -67,7 +67,7 @@ app.add_middleware(
 
 # Default exclusions for health checks and static files
 excluded_paths = {"/", "/health", "/health/", "/health/live", "/health/ready"}
-excluded_prefixes = ["/health/", "/static/", "/docs", "/openapi.json", "/redoc"]
+excluded_prefixes = ["/health/", "/static/", "/docs", "/openapi.json", "/redoc", "/ws/"]
 
 default_requests = getattr(settings, "RATE_LIMIT_DEFAULT_REQUESTS", 100)
 default_window = getattr(settings, "RATE_LIMIT_DEFAULT_WINDOW", 60)

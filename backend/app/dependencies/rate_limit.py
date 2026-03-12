@@ -309,13 +309,12 @@ class WebSocketRateLimiter:
         """Check if a new WebSocket connection is allowed from this IP."""
         limiter = await get_rate_limiter()
         key = f"ws:conn:{ip}"
-        
+
         try:
-            # Use a simple counter for connections
             info = await limiter.check_by_key(
                 key=key,
                 requests=self.max_connections,
-                window=3600  # 1 hour window for connections
+                window=self.window  # use configured window, not hardcoded 1h
             )
             return True
         except RateLimitExceeded:

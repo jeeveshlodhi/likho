@@ -4,7 +4,7 @@ SQLAlchemy models for page permissions and share links.
 from datetime import datetime
 from sqlalchemy import (
     Boolean, Column, String, Text, Integer, DateTime,
-    Enum as SQLEnum, ForeignKey, Index, CheckConstraint
+    Enum as SQLEnum, ForeignKey, Index, ARRAY
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -31,7 +31,9 @@ class PagePermission(Base):
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     role = Column(SQLEnum(MemberRole), nullable=False, default=MemberRole.VIEWER)
     granted_by = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     page = relationship("Page", foreign_keys=[page_id])
@@ -54,7 +56,14 @@ class ShareLink(Base):
     password_hash = Column(Text, nullable=True)
     allow_duplicate = Column(Boolean, default=False)
     view_count = Column(Integer, default=0)
+    max_views = Column(Integer, nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
+    last_accessed_at = Column(DateTime(timezone=True), nullable=True)
+    require_email = Column(Boolean, default=False)
+    allow_comments = Column(Boolean, default=True)
+    allow_export = Column(Boolean, default=True)
+    ip_restrictions = Column(ARRAY(Text), default=list)
+    domain_restrictions = Column(ARRAY(Text), default=list)
     created_by = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     revoked_at = Column(DateTime(timezone=True), nullable=True)

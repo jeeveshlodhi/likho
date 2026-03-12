@@ -76,14 +76,28 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
     role: CollaborationRole;
   } | null>(null);
 
+  // Expose provider via state so consumers re-render when it becomes available.
+  // This is what allows NoteEditor to key on provider availability and remount
+  // useCreateBlockNote with the correct collaboration config.
+  const [providerState, setProviderState] = useState<WebsocketProvider | null>(null);
+
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const { toast } = useToast();
 
+  // Keep toast and user in refs so they never trigger a reconnect
+  const toastRef = useRef(toast);
+  const userRef = useRef(user);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   // Get user's role first — on error, default to 'owner' so notes remain editable
   const { data: role } = usePageRole(enabled ? pageId : undefined);
 
-  const connect = useCallback(async () => {
+  // Synchronous connect — returns a cleanup fn directly so useEffect can call it.
+  // Was previously `async`, which made it return a Promise instead of the cleanup fn,
+  // so old providers were never disconnected and connections piled up.
+  const connect = useCallback(() => {
     if (!enabled || !accessToken || !pageId || !role) return;
 
     // Don't connect for viewers (they get read-only via HTTP)
@@ -110,29 +124,33 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
     const doc = new Y.Doc();
     const wsBase = import.meta.env.VITE_WS_BASE || 'ws://localhost:8000';
 
-    // Configure provider with token in URL (WebSocket doesn't support headers in browsers)
+    // Create provider with connect:false so we can attach listeners before opening
     const provider = new WebsocketProvider(
       wsBase,
       `ws/collab/${pageId}?token=${encodeURIComponent(accessToken)}`,
       doc,
-      {
-        connect: true,
-      }
+      { connect: false }
     );
 
     // Handle connection status
     provider.on('status', (event: { status: string }) => {
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isConnected: event.status === 'connected',
-        error: event.status === 'disconnected' ? 'Disconnected' : null 
+        error: event.status === 'disconnected' ? 'Disconnected' : null,
       }));
     });
 
-    // Handle errors
+    // Handle errors — stop auto-retry on unrecoverable failures (403, 4001, 4003, 4008)
     provider.on('connection-error', (event: any) => {
       console.error('WebSocket error:', event);
-      setState(prev => ({ ...prev, error: 'Connection error' }));
+      const status = event?.status ?? event?.code;
+      const unrecoverable = status === 403 || status === 401
+        || status === 4001 || status === 4003 || status === 4008;
+      if (unrecoverable) {
+        provider.shouldConnect = false;
+      }
+      setState(prev => ({ ...prev, error: 'Connection error', isConnected: false }));
     });
 
     // Handle custom messages
@@ -141,18 +159,10 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'permission_denied') {
-            toast({
-              title: 'Permission Denied',
-              description: data.message,
-              variant: 'destructive',
-            });
+            toastRef.current({ title: 'Permission Denied', description: data.message, variant: 'destructive' });
             setState(prev => ({ ...prev, isReadOnly: true, canEdit: false }));
           } else if (data.type === 'error') {
-            toast({
-              title: 'Error',
-              description: data.message,
-              variant: 'destructive',
-            });
+            toastRef.current({ title: 'Error', description: data.message, variant: 'destructive' });
           }
         } catch {
           // Not JSON, ignore
@@ -160,12 +170,11 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
       }
     };
 
-    // Add message listener
     provider.on('message', handleMessage);
 
     // Set awareness
     provider.awareness.setLocalStateField('user', {
-      name: user?.full_name || user?.email || 'Anonymous',
+      name: userRef.current?.full_name || userRef.current?.email || 'Anonymous',
       color: getRandomColor(),
       role: role,
     });
@@ -192,18 +201,22 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
     updateUsers();
 
     sessionRef.current = { doc, provider, role };
-    
-    // Connect
+    // Publish to state so NoteEditor can key on provider availability
+    setProviderState(provider);
+
+    // Open the connection now that all listeners are registered
     provider.connect();
 
+    // Return cleanup fn — called synchronously by useEffect on re-run or unmount
     return () => {
       provider.awareness.off('change', updateUsers);
       provider.disconnect();
       provider.destroy();
       doc.destroy();
       sessionRef.current = null;
+      setProviderState(null);
     };
-  }, [pageId, role, enabled, accessToken, user, toast]);
+  }, [pageId, role, enabled, accessToken]); // user & toast via refs — no reconnect on change
 
   // When collaboration is disabled (local notes), ensure note is editable
   useEffect(() => {
@@ -213,11 +226,11 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
   }, [enabled]);
 
   useEffect(() => {
-    const cleanupFn = connect();
+    // connect() is now synchronous and returns the cleanup fn directly
+    const cleanup = connect();
     return () => {
-      // cleanupFn might be undefined if role wasn't available
-      if (typeof cleanupFn === 'function') {
-        cleanupFn();
+      if (typeof cleanup === 'function') {
+        cleanup();
       }
     };
   }, [connect]);
@@ -254,7 +267,8 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
   return {
     ...state,
     doc: sessionRef.current?.doc,
-    provider: sessionRef.current?.provider,
+    // Return from state (not ref) so consumers re-render when provider becomes available
+    provider: providerState,
     role: sessionRef.current?.role,
     addComment,
   };
