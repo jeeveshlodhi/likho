@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
@@ -6,7 +6,6 @@ import SpaceSection from './SpaceSection';
 import SidebarFooter from './SidebarFooter';
 import { isTauri } from '@/utils/platform';
 import { SidebarSearch } from '@/components/search';
-import { AutoGroupButton } from '@/components/ai';
 import { useTempNotesStore } from '@/store/tempNotesStore';
 import { isBefore, parseISO } from 'date-fns';
 import { useSharedWithMe } from '@/hooks/useSharedWithMe';
@@ -49,6 +48,13 @@ export default function Sidebar() {
                 {activeTempCount > 9 ? '9+' : activeTempCount}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/auto-group')}
+            title="Auto-group Notes"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <FolderOpen size={18} />
           </button>
           <button
             onClick={() => navigate('/dashboard/workspace-health')}
@@ -192,7 +198,13 @@ export default function Sidebar() {
             <Link2 size={16} />
             Links
           </button>
-          <AutoGroupButton />
+          <button
+            onClick={() => navigate('/dashboard/auto-group')}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+          >
+            <FolderOpen size={16} />
+            Auto-group Notes
+          </button>
           <button
             onClick={() => navigate('/dashboard/workspace-health')}
             className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
