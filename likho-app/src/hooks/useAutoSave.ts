@@ -1,19 +1,30 @@
 import { useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
-import { updatePage } from '@/lib/workspaceApi';
+import { createPage, updatePage } from '@/lib/workspaceApi';
 import { SearchService } from '@/lib/search-service';
+import { useWorkspace, useSpaces } from '@/hooks/useWorkspace';
 import type { Note } from '@/types/workspace';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function useAutoSave(noteId: string, delay = 500) {
   const updateNote = useWorkspaceStore((s) => s.updateNote);
+  const replaceNote = useWorkspaceStore((s) => s.replaceNote);
   const notes = useWorkspaceStore((s) => s.notes);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const navigate = useNavigate();
+
+  // Fetch workspace + spaces to get the online space_id for new page creation
+  const { data: workspace } = useWorkspace();
+  const { data: spaces } = useSpaces(workspace?.id);
+
   const localTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const backendTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevent concurrent create calls when saves fire quickly
+  const isCreatingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -29,7 +40,7 @@ export function useAutoSave(noteId: string, delay = 500) {
       localTimeoutRef.current = setTimeout(() => {
         updateNote(noteId, updates);
 
-        // Sync note to Rust DB then index for RAG search
+        // Sync note to local Rust DB then index for RAG search
         const note = notes.find((n) => n.id === noteId);
         if (note) {
           const contentVal = updates.content !== undefined ? updates.content : note.content;
@@ -61,14 +72,17 @@ export function useAutoSave(noteId: string, delay = 500) {
         }
       }, delay);
 
-      // For online notes: also persist to backend (slightly longer debounce)
+      // For online notes: persist to backend (slightly longer debounce)
       const note = notes.find((n) => n.id === noteId);
       const isOnline = note?.spaceType === 'online';
-      const canSync = isOnline && isAuthenticated && !isGuest && UUID_REGEX.test(noteId);
+      if (!isOnline || !isAuthenticated || isGuest) return;
 
-      if (canSync) {
-        if (backendTimeoutRef.current) clearTimeout(backendTimeoutRef.current);
-        backendTimeoutRef.current = setTimeout(() => {
+      if (backendTimeoutRef.current) clearTimeout(backendTimeoutRef.current);
+      backendTimeoutRef.current = setTimeout(async () => {
+        const isUuid = UUID_REGEX.test(noteId);
+
+        if (isUuid) {
+          // ── Normal update path ──────────────────────────────────────────
           const backendUpdates: Record<string, unknown> = {};
           if (updates.title !== undefined) backendUpdates.title = updates.title;
           if (updates.content !== undefined) backendUpdates.content = updates.content;
@@ -76,13 +90,55 @@ export function useAutoSave(noteId: string, delay = 500) {
 
           if (Object.keys(backendUpdates).length > 0) {
             updatePage(noteId, backendUpdates).catch(() => {
-              // Silent fail — local copy is the source of truth
+              // Silent fail — local copy is source of truth
             });
           }
-        }, Math.max(delay, 1000)); // backend debounce: at least 1s
-      }
+        } else {
+          // ── Create-on-first-save path ───────────────────────────────────
+          // The note has a local nanoid ID — it hasn't been registered in the
+          // backend yet. Call createPage once, then replace the local nanoid
+          // with the returned UUID and navigate to the new route.
+          if (isCreatingRef.current) return;
+          isCreatingRef.current = true;
+
+          const onlineSpace = spaces?.find((s) => s.type === 'online');
+          if (!onlineSpace) {
+            isCreatingRef.current = false;
+            return; // spaces haven't loaded yet — will retry on next save
+          }
+
+          const currentNote = notes.find((n) => n.id === noteId);
+          if (!currentNote) {
+            isCreatingRef.current = false;
+            return;
+          }
+
+          try {
+            const newPage = await createPage({
+              title: (updates.title ?? currentNote.title) || 'Untitled',
+              space_id: onlineSpace.id,
+              content: updates.content ?? currentNote.content,
+              page_type: currentNote.pageType ?? 'note',
+              // Only pass parent_id if it's a real UUID — nanoid folder IDs
+              // have not been synced to the backend yet.
+              parent_id: currentNote.folderId && UUID_REGEX.test(currentNote.folderId)
+                ? currentNote.folderId
+                : null,
+            });
+
+            // Swap the nanoid for the real UUID in the local store
+            replaceNote(noteId, newPage.id);
+            // Navigate to the UUID-based route (replaceNote already updated activeNoteId)
+            navigate(`/dashboard/note/${newPage.id}`, { replace: true });
+          } catch (err) {
+            console.warn('Failed to register online note with backend:', err);
+          } finally {
+            isCreatingRef.current = false;
+          }
+        }
+      }, Math.max(delay, 1000)); // backend debounce: at least 1s
     },
-    [noteId, delay, updateNote, notes, isAuthenticated, isGuest]
+    [noteId, delay, updateNote, replaceNote, notes, isAuthenticated, isGuest, workspace, spaces, navigate]
   );
 
   return save;

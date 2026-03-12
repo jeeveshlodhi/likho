@@ -25,6 +25,7 @@ interface WorkspaceState {
   createCanvas: (folderId: string | null, spaceType: SpaceType) => Note;
   addNote: (note: Note) => void;
   updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'icon' | 'coverImage' | 'pageType'>>) => void;
+  replaceNote: (oldId: string, newId: string) => void;
   deleteNote: (id: string) => void;
   moveNote: (noteId: string, targetFolderId: string | null) => void;
 
@@ -154,6 +155,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           notes: state.notes.map((n) =>
             n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n
           ),
+        })),
+
+      replaceNote: (oldId, newId) =>
+        set((state) => ({
+          notes: state.notes.map((n) =>
+            n.id === oldId ? { ...n, id: newId } : n
+          ),
+          activeNoteId: state.activeNoteId === oldId ? newId : state.activeNoteId,
         })),
 
       deleteNote: (id) =>

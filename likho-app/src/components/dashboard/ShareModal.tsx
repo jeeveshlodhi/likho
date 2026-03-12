@@ -79,8 +79,13 @@ interface ShareModalProps {
   onClose: () => void;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function ShareModal({ pageId, pageTitle, open, onClose }: ShareModalProps) {
   const { toast } = useToast();
+
+  // Pages start with nanoid IDs locally and get a real UUID once synced to the backend.
+  const isPageSynced = UUID_REGEX.test(pageId);
 
   // Invite form
   const [email, setEmail]           = useState('');
@@ -100,11 +105,11 @@ export default function ShareModal({ pageId, pageTitle, open, onClose }: ShareMo
   // Copy feedback
   const [copied, setCopied] = useState(false);
 
-  // Queries
+  // Queries — only fire when page is synced (UUID) and modal is open
   const { data: permissions = [], isLoading: permsLoading } =
-    usePagePermissions(open ? pageId : undefined);
+    usePagePermissions(open && isPageSynced ? pageId : undefined);
   const { data: shareLinks = [], isLoading: linksLoading } =
-    usePageShareLinks(open ? pageId : undefined);
+    usePageShareLinks(open && isPageSynced ? pageId : undefined);
 
   const shareMutation      = useSharePage();
   const removeMutation     = useRemovePermission();
@@ -253,6 +258,14 @@ export default function ShareModal({ pageId, pageTitle, open, onClose }: ShareMo
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {!isPageSynced ? (
+            /* Page hasn't synced to the backend yet — its ID is still a nanoid. */
+            <div className="px-5 py-6 text-sm text-muted-foreground space-y-2">
+              <p>This page is still syncing to the server.</p>
+              <p>Sharing will be available once it finishes syncing. Please try again in a moment.</p>
+            </div>
+          ) : (
+            <>
           {/* ── Invite form ──────────────────────────────────────────── */}
           <div className="px-5 pb-5">
             <form onSubmit={handleInvite} className="flex gap-2">
@@ -488,6 +501,8 @@ export default function ShareModal({ pageId, pageTitle, open, onClose }: ShareMo
               )}
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────── */}

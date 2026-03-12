@@ -300,8 +300,9 @@ function NoteEditorBody({
             </>
           )}
 
-          {/* Share button */}
-          {note.spaceType === 'online' && isUuid(note.id) && (
+          {/* Share button — show for all online notes (isUuid was too strict:
+              newly-created notes use nanoid until the backend sync assigns a UUID) */}
+          {note.spaceType === 'online' && (
             <button
               type="button"
               onClick={() => setShareOpen(true)}
@@ -313,8 +314,8 @@ function NoteEditorBody({
             </button>
           )}
 
-          {/* Comments button */}
-          {canComment && (
+          {/* Comments button — only shown for synced pages (UUID ID) */}
+          {canCollab && canComment && (
             <Button
               variant="ghost"
               size="sm"
@@ -413,7 +414,7 @@ function NoteEditorBody({
         </div>
 
         {/* Right Sidebar */}
-        {!showComments ? (
+        {!showComments || !canCollab ? (
           <RightSidebar
             note={note}
             contentText={
@@ -445,7 +446,7 @@ function NoteEditorBody({
             onApplyTitle={(title) => save({ title })}
             defaultCollapsed={true}
           />
-        ) : (
+        ) : canCollab ? (
           <div className="w-80 border-l border-border bg-background overflow-y-auto">
             <CommentThread
               pageId={noteId}
@@ -453,7 +454,7 @@ function NoteEditorBody({
               canResolve={!isReadOnly}
             />
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -473,9 +474,10 @@ export default function NoteEditor() {
 
   const note = notes.find((n) => n.id === noteId);
 
-  // Collaboration is only enabled for online notes with valid UUIDs
+  // Collaboration is only enabled for online notes whose ID is a real UUID
+  // (newly-created notes have nanoid IDs until the backend sync assigns a UUID)
   const isOnline = note?.spaceType === 'online';
-  const canCollab = !!(isOnline && noteId && isUuid(noteId));
+  const canCollab = !!(isOnline && noteId && isUuid(noteId)); // UUID check stays for WS auth
 
   const {
     provider,

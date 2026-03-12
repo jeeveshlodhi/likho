@@ -4,6 +4,7 @@ API endpoints for sharing and permissions.
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
@@ -25,6 +26,8 @@ from app.modules.sharing.schemas import (
 from app.modules.collaboration.crud import log_activity
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/pages/{page_id}/share", response_model=PermissionResponse)
@@ -62,10 +65,13 @@ def share_page(
     )
     
     # Log activity
-    log_activity(db, page_id, current_user.id, "share", {
-        "target_user_id": str(target_user.id),
-        "role": data.role
-    })
+    try:
+        log_activity(db, page_id, current_user.id, "share", {
+            "target_user_id": str(target_user.id),
+            "role": data.role
+        })
+    except Exception as _log_err:
+        logger.warning(f"Failed to log share activity: {_log_err}")
     
     return {
         "id": perm.id,
@@ -114,9 +120,12 @@ def remove_permission(
     crud.remove_permission(db, page_id, user_id)
     
     # Log activity
-    log_activity(db, page_id, current_user.id, "unshare", {
-        "target_user_id": str(user_id)
-    })
+    try:
+        log_activity(db, page_id, current_user.id, "unshare", {
+            "target_user_id": str(user_id)
+        })
+    except Exception as _log_err:
+        logger.warning(f"Failed to log unshare activity: {_log_err}")
 
 
 @router.post("/pages/{page_id}/share-link", response_model=ShareLinkResponse)
@@ -153,10 +162,13 @@ def create_share_link(
     )
     
     # Log activity
-    log_activity(db, page_id, current_user.id, "create_share_link", {
-        "role": data.role,
-        "expires_at": str(expires_at) if expires_at else None
-    })
+    try:
+        log_activity(db, page_id, current_user.id, "create_share_link", {
+            "role": data.role,
+            "expires_at": str(expires_at) if expires_at else None
+        })
+    except Exception as _log_err:
+        logger.warning(f"Failed to log create_share_link activity: {_log_err}")
     
     return link
 

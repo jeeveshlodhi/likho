@@ -46,10 +46,13 @@ class PermissionLevel(IntEnum):
 class PermissionContext:
     """Holds permission information for a connection."""
     
-    def __init__(self, user_id: uuid.UUID, level: PermissionLevel, role: str):
+    def __init__(self, user_id: uuid.UUID, level: PermissionLevel, role: str, is_synthetic: bool = False):
         self.user_id = user_id
         self.level = level
         self.role = role
+        # True for share-token users whose UUID is not in the `users` table.
+        # These users must not be written to FK-constrained DB columns.
+        self.is_synthetic = is_synthetic
     
     @property
     def can_edit(self) -> bool:
@@ -173,33 +176,37 @@ class YjsRoom:
                 ctx.role
             )
             
-            # Log session start
-            await self._log_activity(ctx.user_id, "join", {
+            # Log session start — use None for synthetic share-token users
+            # since their UUID doesn't exist in the `users` table.
+            log_user_id = None if ctx.is_synthetic else ctx.user_id
+            await self._log_activity(log_user_id, "join", {
                 "connection_id": connection_id,
                 "role": ctx.role,
                 "can_edit": ctx.can_edit
             })
             
-            # Record in database
-            db = SessionLocal()
-            try:
-                session = CollaborationSession(
-                    page_id=uuid.UUID(self.page_id),
-                    user_id=ctx.user_id,
-                    client_id=connection_id,
-                    connection_id=connection_id,
-                    role=ctx.role,
-                    can_edit=ctx.can_edit,
-                    can_comment=ctx.can_comment,
-                    ip_address=ip_address,
-                    user_agent=user_agent
-                )
-                db.add(session)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Failed to record session: {e}")
-            finally:
-                db.close()
+            # Record in database (skip for synthetic share-token users — their UUID
+            # is not present in the `users` table, so the FK constraint would fail).
+            if not ctx.is_synthetic:
+                db = SessionLocal()
+                try:
+                    session = CollaborationSession(
+                        page_id=uuid.UUID(self.page_id),
+                        user_id=ctx.user_id,
+                        client_id=connection_id,
+                        connection_id=connection_id,
+                        role=ctx.role,
+                        can_edit=ctx.can_edit,
+                        can_comment=ctx.can_comment,
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
+                    db.add(session)
+                    db.commit()
+                except Exception as e:
+                    logger.error(f"Failed to record session: {e}")
+                finally:
+                    db.close()
         
         # Start persistence task if first client
         if len(self.clients) == 1:
@@ -220,15 +227,19 @@ class YjsRoom:
             if ctx:
                 db = SessionLocal()
                 try:
-                    session = db.query(CollaborationSession).filter(
-                        CollaborationSession.connection_id == connection_id
-                    ).first()
-                    if session:
-                        session.disconnected_at = datetime.utcnow()
-                        db.commit()
+                    # Only look up / update DB session for real (non-synthetic) users.
+                    if not ctx.is_synthetic:
+                        session = db.query(CollaborationSession).filter(
+                            CollaborationSession.connection_id == connection_id
+                        ).first()
+                        if session:
+                            session.disconnected_at = datetime.utcnow()
+                            db.commit()
                     
-                    # Log leave
-                    await self._log_activity(ctx.user_id, "leave", {
+                    # Log leave — pass None for synthetic user IDs so the
+                    # nullable FK column is used instead of a non-existent UUID.
+                    log_user_id = None if ctx.is_synthetic else ctx.user_id
+                    await self._log_activity(log_user_id, "leave", {
                         "connection_id": connection_id
                     }, db=db)
                 except Exception as e:
@@ -279,9 +290,10 @@ class YjsRoom:
             # Queue for persistence
             await self.redis.queue_update(self.page_id, update)
             
-            # Log edit (throttled)
+            # Log edit (throttled) — use None for synthetic share-token users.
             if len(update) > 10:  # Skip tiny updates (cursor movements, etc)
-                await self._log_activity(ctx.user_id, "edit", {
+                log_user_id = None if ctx.is_synthetic else ctx.user_id
+                await self._log_activity(log_user_id, "edit", {
                     "update_size": len(update)
                 })
         
@@ -356,12 +368,16 @@ class YjsRoom:
     
     async def _log_activity(
         self, 
-        user_id: uuid.UUID, 
+        user_id: Optional[uuid.UUID], 
         action: str, 
         metadata: dict,
         db: Optional[Session] = None
     ):
-        """Log collaboration activity."""
+        """Log collaboration activity.
+        
+        user_id may be None for anonymous/synthetic share-token users;
+        the CollaborationLog.user_id column is nullable for exactly this reason.
+        """
         should_close = False
         if db is None:
             db = SessionLocal()
@@ -370,7 +386,7 @@ class YjsRoom:
         try:
             log = CollaborationLog(
                 page_id=uuid.UUID(self.page_id),
-                user_id=user_id,
+                user_id=user_id,  # None is valid — column is nullable
                 action=action,
                 meta_data=metadata,
                 update_size=metadata.get("update_size")
@@ -464,7 +480,7 @@ async def collab_websocket_v2(
             # same link always maps to the same "user" in the room.
             synthetic_user_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"share_token:{share_token}")
             level = get_permission_level(link_role)
-            ctx = PermissionContext(synthetic_user_id, level, link_role)
+            ctx = PermissionContext(synthetic_user_id, level, link_role, is_synthetic=True)
             logger.info(f"Share-token auth for page {page_id}, role={link_role}")
         finally:
             db.close()
