@@ -355,15 +355,15 @@ export default function NoteEditor() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Main Editor */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-4xl pb-8">
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          <div className="flex-1 flex flex-col mx-auto w-full max-w-5xl">
             <NoteHeader note={note} />
 
             <div className="px-4 sm:px-8">
               <NoteTitleInput note={note} />
             </div>
 
-            <div className="min-h-[60vh] mt-4 px-4 sm:px-8 relative">
+            <div className="flex-1 min-h-0 mt-4 px-4 sm:px-8 pb-24 relative">
               {/* Read-only overlay for viewers */}
               {isReadOnly && (
                 <div className="absolute inset-0 z-10 bg-background/50 pointer-events-none" />
@@ -453,6 +453,7 @@ export default function NoteEditor() {
               );
             }}
             onApplyTitle={(title) => save({ title })}
+            defaultCollapsed={true}
           />
         ) : (
           <div className="w-80 border-l border-border bg-background overflow-y-auto">

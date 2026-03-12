@@ -93,6 +93,7 @@ export default function KanbanEditor() {
                     contentText={note.title}
                     getSelectedText={() => ''}
                     onApplyText={() => {}}
+                    defaultCollapsed={true}
                 />
             </div>
         </div>
