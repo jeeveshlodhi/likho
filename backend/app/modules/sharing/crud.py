@@ -79,6 +79,46 @@ def list_permissions(db: Session, page_id: UUID) -> list[dict]:
     return result
 
 
+def list_pages_shared_with_user(db: Session, user_id: UUID) -> list[dict]:
+    """Return all pages explicitly shared with a user (not expired, not deleted)."""
+    perms = (
+        db.query(PagePermission)
+        .filter(PagePermission.user_id == user_id)
+        .order_by(PagePermission.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for p in perms:
+        # Skip expired permissions
+        if p.expires_at and p.expires_at < datetime.utcnow():
+            continue
+
+        # Load the page — skip if soft-deleted
+        page = db.query(Page).filter(
+            Page.id == p.page_id,
+            Page.deleted_at.is_(None),
+        ).first()
+        if not page:
+            continue
+
+        # Load the granter's profile
+        granter = db.query(User).filter(User.id == p.granted_by).first() if p.granted_by else None
+
+        result.append({
+            "page_id": page.id,
+            "page_title": page.title or "Untitled",
+            "page_icon": page.icon,
+            "page_type": page.page_type,
+            "role": p.role.value if hasattr(p.role, "value") else p.role,
+            "granted_by_name": granter.full_name if granter else None,
+            "granted_by_email": granter.email if granter else None,
+            "granted_at": p.created_at,
+            "expires_at": p.expires_at,
+        })
+    return result
+
+
 def remove_permission(db: Session, page_id: UUID, user_id: UUID) -> bool:
     """Remove a user's access to a page."""
     perm = db.query(PagePermission).filter(

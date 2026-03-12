@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3 } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
@@ -9,6 +9,7 @@ import { SidebarSearch } from '@/components/search';
 import { AutoGroupButton } from '@/components/ai';
 import { useTempNotesStore } from '@/store/tempNotesStore';
 import { isBefore, parseISO } from 'date-fns';
+import { useSharedWithMe } from '@/hooks/useSharedWithMe';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
@@ -16,6 +17,8 @@ export default function Sidebar() {
   const showOnlineSpace = isAuthenticated && !isGuest;
   const navigate = useNavigate();
   const { notes: tempNotes, setQuickCaptureOpen } = useTempNotesStore();
+  const { data: sharedWithMe = [] } = useSharedWithMe();
+  const sharedCount = sharedWithMe.length;
   const now = new Date();
   const activeTempCount = tempNotes.filter(
     (n) => !n.isPermanent && !isBefore(parseISO(n.expiresAt), now)
@@ -54,6 +57,20 @@ export default function Sidebar() {
           >
             <Activity size={18} />
           </button>
+          {showOnlineSpace && (
+            <button
+              onClick={() => navigate('/dashboard/shared-with-me')}
+              title="Shared with me"
+              className="relative rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <Users size={18} />
+              {sharedCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {sharedCount > 9 ? '9+' : sharedCount}
+                </span>
+              )}
+            </button>
+          )}
           <button
             onClick={() => navigate('/dashboard/ai-chat')}
             title="Ask AI (Workspace Q&A)"
@@ -99,6 +116,21 @@ export default function Sidebar() {
         {showOnlineSpace && (
           <>
             <SpaceSection spaceType="online" />
+            {/* Shared With Me — only in online mode */}
+            <button
+              onClick={() => navigate('/dashboard/shared-with-me')}
+              className="w-full mt-0.5 flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Users size={15} className="text-muted-foreground" />
+                <span>Shared with me</span>
+              </div>
+              {sharedCount > 0 && (
+                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary leading-none">
+                  {sharedCount}
+                </span>
+              )}
+            </button>
             {isTauri() && <div className="my-1 border-t border-sidebar-border" />}
           </>
         )}

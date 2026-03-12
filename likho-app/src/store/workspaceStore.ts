@@ -146,7 +146,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       addNote: (note) =>
         set((state) => ({
           notes: state.notes.some((n) => n.id === note.id)
-            ? state.notes.map((n) => (n.id === note.id ? note : n))
+            ? state.notes.map((n) => {
+                if (n.id !== note.id) return n;
+                // Merge: prefer the incoming value for every field EXCEPT
+                // `content` — only overwrite content when the incoming value
+                // is explicitly provided (not undefined). List API responses
+                // don't include page content, so we must keep the local copy.
+                return {
+                  ...n,
+                  ...note,
+                  content: note.content !== undefined ? note.content : n.content,
+                };
+              })
             : [...state.notes, note],
         })),
 

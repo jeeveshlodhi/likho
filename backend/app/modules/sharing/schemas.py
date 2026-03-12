@@ -82,3 +82,17 @@ class SharedPageResponse(BaseModel):
 
 class PageRoleResponse(BaseModel):
     role: str
+
+
+class SharedWithMeItem(BaseModel):
+    page_id: UUID
+    page_title: str
+    page_icon: Optional[str] = None
+    page_type: str = "note"
+    role: str
+    granted_by_name: Optional[str] = None
+    granted_by_email: Optional[str] = None
+    granted_at: datetime
+    expires_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}

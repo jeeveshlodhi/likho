@@ -22,12 +22,23 @@ from app.modules.sharing.schemas import (
     SharedPageResponse,
     SharedPageUpdate,
     ShareLinkUpdate,
+    SharedWithMeItem,
 )
 from app.modules.collaboration.crud import log_activity
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
+
+
+@router.get("/shared-with-me", response_model=list[SharedWithMeItem])
+def list_shared_with_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Return all pages explicitly shared with the current user."""
+    return crud.list_pages_shared_with_user(db, current_user.id)
 
 
 @router.post("/pages/{page_id}/share", response_model=PermissionResponse)
@@ -38,14 +49,17 @@ def share_page(
     current_user: User = Depends(get_current_active_user),
 ):
     """Share a page with a user by email."""
-    # Verify page exists and user owns it
+    # Verify page exists and user has admin+ access
     page = workspace_crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
-    
+
     workspace = workspace_crud.get_workspace(db, page.workspace_id)
-    if not workspace or workspace.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to share this page")
+    is_owner = workspace and workspace.owner_id == current_user.id
+    if not is_owner:
+        # Collaborators with admin role can also share the page
+        if not crud.check_access(db, current_user.id, page_id, "admin"):
+            raise HTTPException(status_code=403, detail="Not authorized to share this page")
 
     # Find target user by email
     from app.modules.users.crud import get_user_by_email

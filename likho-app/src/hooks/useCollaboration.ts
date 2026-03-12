@@ -134,11 +134,13 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
 
     // Handle connection status
     provider.on('status', (event: { status: string }) => {
-      setState(prev => ({
-        ...prev,
-        isConnected: event.status === 'connected',
-        error: event.status === 'disconnected' ? 'Disconnected' : null,
-      }));
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isConnected: event.status === 'connected',
+          error: event.status === 'disconnected' ? 'Disconnected' : null,
+        }));
+      }, 0);
     });
 
     // Handle errors — stop auto-retry on unrecoverable failures (403, 4001, 4003, 4008)
@@ -150,7 +152,9 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
       if (unrecoverable) {
         provider.shouldConnect = false;
       }
-      setState(prev => ({ ...prev, error: 'Connection error', isConnected: false }));
+      setTimeout(() => {
+        setState(prev => ({ ...prev, error: 'Connection error', isConnected: false }));
+      }, 0);
     });
 
     // Handle custom messages
@@ -159,10 +163,14 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'permission_denied') {
-            toastRef.current({ title: 'Permission Denied', description: data.message, variant: 'destructive' });
-            setState(prev => ({ ...prev, isReadOnly: true, canEdit: false }));
+            setTimeout(() => {
+              toastRef.current({ title: 'Permission Denied', description: data.message, variant: 'destructive' });
+              setState(prev => ({ ...prev, isReadOnly: true, canEdit: false }));
+            }, 0);
           } else if (data.type === 'error') {
-            toastRef.current({ title: 'Error', description: data.message, variant: 'destructive' });
+            setTimeout(() => {
+              toastRef.current({ title: 'Error', description: data.message, variant: 'destructive' });
+            }, 0);
           }
         } catch {
           // Not JSON, ignore

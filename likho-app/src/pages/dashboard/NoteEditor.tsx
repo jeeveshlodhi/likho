@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import type { WebsocketProvider } from 'y-websocket';
 
@@ -61,6 +61,7 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useLinkStore } from '@/store/linkStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useCollaboration, usePageComments } from '@/hooks/useCollaboration';
+import { useWorkspace, useSpaces, usePage } from '@/hooks/useWorkspace';
 import Breadcrumb from '@/components/dashboard/Breadcrumb';
 import NoteTitleInput from '@/components/dashboard/NoteTitleInput';
 import NoteHeader from '@/components/dashboard/NoteHeader';
@@ -167,6 +168,7 @@ interface NoteEditorBodyProps {
   isReadOnly: boolean;
   canComment: boolean;
   canCollab: boolean;
+  canShare: boolean;
   users: any[];
   error: string | null;
   isConnected: boolean;
@@ -182,7 +184,7 @@ interface NoteEditorBodyProps {
 }
 
 function NoteEditorBody({
-  note, noteId, provider, isReadOnly, canComment, canCollab,
+  note, noteId, provider, isReadOnly, canComment, canCollab, canShare,
   users, error, isConnected, comments, shareOpen, setShareOpen,
   showComments, setShowComments, save, notes, folders, scanNoteForLinks,
 }: NoteEditorBodyProps) {
@@ -251,6 +253,39 @@ function NoteEditorBody({
     }
   }, [note?.id, editor, provider]);
 
+  // Bootstrap Y.Doc from REST content when the server has no Yjs state.
+  // This covers: first-ever collab open, sessions after clearing corrupt DB state,
+  // and the window between editor mount and Yjs state arrival.
+  //
+  // After provider syncs, if the XmlFragment is still empty (no state came from
+  // the server or any peer), we write the REST content into the Y.Doc.
+  // Because BlockNote is in collab mode, this write propagates to the server
+  // and all connected peers, making it the canonical initial state.
+  useEffect(() => {
+    if (!provider || !editor) return;
+
+    const handleSync = (isSynced: boolean) => {
+      if (!isSynced) return;
+
+      // The XmlFragment is BlockNote's Yjs backing store. If it has children,
+      // Yjs already loaded real content — don't overwrite it.
+      const fragment = provider.doc.getXmlFragment('document-store');
+      if (fragment.length > 0) return;
+
+      // Y.Doc is empty: seed from REST content.
+      const restContent = getInitialContent(note?.content);
+      if (!restContent || restContent.length === 0) return;
+
+      editor.replaceBlocks(editor.document, restContent);
+    };
+
+    provider.on('sync', handleSync);
+    return () => provider.off('sync', handleSync);
+  // note is intentionally excluded: REST content is only a seed source.
+  // After initial sync, Yjs is the source of truth — note changes don't override it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, editor]);
+
   const handleLinkSelect = (suggestion: { id: string; title: string; type: 'note' | 'folder' }) => {
     if (!editor) return;
 
@@ -300,9 +335,8 @@ function NoteEditorBody({
             </>
           )}
 
-          {/* Share button — show for all online notes (isUuid was too strict:
-              newly-created notes use nanoid until the backend sync assigns a UUID) */}
-          {note.spaceType === 'online' && (
+          {/* Share button — only for owner/admin, not for collaborators */}
+          {note.spaceType === 'online' && canShare && (
             <button
               type="button"
               onClick={() => setShareOpen(true)}
@@ -333,7 +367,7 @@ function NoteEditorBody({
         </div>
       </div>
 
-      {note.spaceType === 'online' && (
+      {note.spaceType === 'online' && canShare && (
         <ShareModal
           pageId={note.id}
           pageTitle={note.title || 'Untitled'}
@@ -472,12 +506,45 @@ export default function NoteEditor() {
   const { notes, folders, setActiveNote } = useWorkspaceStore();
   const { scanNoteForLinks } = useLinkStore();
 
-  const note = notes.find((n) => n.id === noteId);
+  const localNote = notes.find((n) => n.id === noteId);
 
-  // Collaboration is only enabled for online notes whose ID is a real UUID
-  // (newly-created notes have nanoid IDs until the backend sync assigns a UUID)
-  const isOnline = note?.spaceType === 'online';
-  const canCollab = !!(isOnline && noteId && isUuid(noteId)); // UUID check stays for WS auth
+  // For shared pages that live in another user's workspace, fall back to a
+  // server-side fetch. Only fires when the local store has no match and
+  // the ID looks like a real UUID (shared pages always have UUIDs).
+  const isUuidId = !!(noteId && isUuid(noteId));
+  const { data: remotePage, isLoading: remoteLoading, isError: remoteError } = usePage(
+    !localNote && isUuidId ? noteId : undefined
+  );
+
+  // Memoize the remote→local Note conversion so we don't produce a new object
+  // on every render. A new object would make `note` always "change", causing
+  // `canCollab` to appear to flip and the WebSocket to reconnect in a loop.
+  const remoteNote = useMemo(() => {
+    if (!remotePage) return undefined;
+    return {
+      id: String(remotePage.id),
+      title: remotePage.title || '',
+      content: remotePage.content,
+      folderId: remotePage.parent_id ? String(remotePage.parent_id) : null,
+      spaceType: 'online' as const,
+      pageType: (remotePage.page_type as any) ?? 'note',
+      icon: remotePage.icon ?? null,
+      coverImage: remotePage.cover_url ?? undefined,
+      sortOrder: remotePage.sort_order ?? 0,
+      createdAt: remotePage.created_at,
+      updatedAt: remotePage.updated_at,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remotePage?.id, remotePage?.updated_at]);
+
+  const note = localNote ?? remoteNote;
+
+  // `canCollab` is derived from the note ID being a UUID — we know this
+  // immediately from the URL, before the note has finished loading.
+  // This keeps `canCollab` stable from the very first render so the WebSocket
+  // doesn't rapidly connect → disconnect → reconnect as the note loads.
+  const isOnline = isUuidId || note?.spaceType === 'online';
+  const canCollab = !!(isOnline && noteId && isUuid(noteId));
 
   const {
     provider,
@@ -485,14 +552,25 @@ export default function NoteEditor() {
     isReadOnly,
     canComment,
     users,
-    error
+    error,
+    role,
   } = useCollaboration({
     pageId: noteId || '',
     enabled: canCollab,
   });
 
+  // Only workspace owner or admin collaborators may share the page.
+  // Non-collab (local) notes are owned by the user so sharing is always allowed.
+  const canShare = !canCollab || role === 'owner' || role === 'admin';
+
   const { comments } = usePageComments(canCollab ? noteId : undefined);
-  const save = useAutoSave(noteId || '');
+
+  // Resolve the online space ID here (top-level component, safe to use React Query).
+  const { data: workspace } = useWorkspace();
+  const { data: spaces } = useSpaces(workspace?.id);
+  const onlineSpaceId = spaces?.find((s) => s.type === 'online')?.id;
+
+  const save = useAutoSave(noteId || '', onlineSpaceId);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -502,12 +580,37 @@ export default function NoteEditor() {
   }, [noteId, setActiveNote]);
 
   useEffect(() => {
-    if (!note && noteId) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [note, noteId, navigate]);
+    if (!noteId) return;
 
-  if (!note) return null;
+    if (!isUuidId) {
+      // Nanoid note: if it's not in the local store, it doesn't exist anywhere
+      if (!localNote) {
+        navigate('/dashboard', { replace: true });
+      }
+    } else {
+      // UUID note: if it's not in local store, we rely on the backend fetch.
+      // If the backend returns an error (e.g. 404 Not Found or 403 Forbidden), redirect.
+      if (!localNote && remoteError) {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [localNote, remoteError, noteId, isUuidId, navigate]);
+
+  // Show a spinner while the remote page is being fetched (shared/remote notes).
+  // Without this the user sees a completely blank panel during loading.
+  if (!note) {
+    if (remoteLoading) {
+      return (
+        <div className="flex h-full items-center justify-center text-muted-foreground">
+          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+        </div>
+      );
+    }
+    return null;
+  }
 
   // The key controls when NoteEditorBody re-mounts:
   // - Local notes: stable 'local-{id}' key — never re-mounts
@@ -528,6 +631,7 @@ export default function NoteEditor() {
       isReadOnly={isReadOnly}
       canComment={canComment}
       canCollab={canCollab}
+      canShare={canShare}
       users={users}
       error={error ?? null}
       isConnected={isConnected}

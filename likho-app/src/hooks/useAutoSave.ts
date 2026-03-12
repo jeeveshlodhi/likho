@@ -4,22 +4,26 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import { createPage, updatePage } from '@/lib/workspaceApi';
 import { SearchService } from '@/lib/search-service';
-import { useWorkspace, useSpaces } from '@/hooks/useWorkspace';
 import type { Note } from '@/types/workspace';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function useAutoSave(noteId: string, delay = 500) {
+/**
+ * Autosave hook for note content.
+ *
+ * @param noteId       - Current note ID (may be a nanoid or a UUID)
+ * @param onlineSpaceId - ID of the user's online space (passed in from the editor so
+ *                        we don't call useWorkspace/useSpaces here and risk triggering
+ *                        React Query updates during a child render cycle)
+ * @param delay        - Local debounce delay in ms (default 500)
+ */
+export function useAutoSave(noteId: string, onlineSpaceId?: string, delay = 500) {
   const updateNote = useWorkspaceStore((s) => s.updateNote);
   const replaceNote = useWorkspaceStore((s) => s.replaceNote);
   const notes = useWorkspaceStore((s) => s.notes);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isGuest = useAuthStore((s) => s.isGuest);
   const navigate = useNavigate();
-
-  // Fetch workspace + spaces to get the online space_id for new page creation
-  const { data: workspace } = useWorkspace();
-  const { data: spaces } = useSpaces(workspace?.id);
 
   const localTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const backendTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,7 +79,9 @@ export function useAutoSave(noteId: string, delay = 500) {
       // For online notes: persist to backend (slightly longer debounce)
       const note = notes.find((n) => n.id === noteId);
       const isOnline = note?.spaceType === 'online';
-      if (!isOnline || !isAuthenticated || isGuest) return;
+      // Also persist for shared remote pages: UUID not in local store (e.g. shared with current user)
+      const isSharedRemote = !note && UUID_REGEX.test(noteId);
+      if ((!isOnline && !isSharedRemote) || !isAuthenticated || isGuest) return;
 
       if (backendTimeoutRef.current) clearTimeout(backendTimeoutRef.current);
       backendTimeoutRef.current = setTimeout(async () => {
@@ -99,13 +105,9 @@ export function useAutoSave(noteId: string, delay = 500) {
           // backend yet. Call createPage once, then replace the local nanoid
           // with the returned UUID and navigate to the new route.
           if (isCreatingRef.current) return;
-          isCreatingRef.current = true;
+          if (!onlineSpaceId) return; // space ID not yet loaded — will retry on next save
 
-          const onlineSpace = spaces?.find((s) => s.type === 'online');
-          if (!onlineSpace) {
-            isCreatingRef.current = false;
-            return; // spaces haven't loaded yet — will retry on next save
-          }
+          isCreatingRef.current = true;
 
           const currentNote = notes.find((n) => n.id === noteId);
           if (!currentNote) {
@@ -116,7 +118,7 @@ export function useAutoSave(noteId: string, delay = 500) {
           try {
             const newPage = await createPage({
               title: (updates.title ?? currentNote.title) || 'Untitled',
-              space_id: onlineSpace.id,
+              space_id: onlineSpaceId,
               content: updates.content ?? currentNote.content,
               page_type: currentNote.pageType ?? 'note',
               // Only pass parent_id if it's a real UUID — nanoid folder IDs
@@ -128,7 +130,7 @@ export function useAutoSave(noteId: string, delay = 500) {
 
             // Swap the nanoid for the real UUID in the local store
             replaceNote(noteId, newPage.id);
-            // Navigate to the UUID-based route (replaceNote already updated activeNoteId)
+            // Navigate to the UUID-based route
             navigate(`/dashboard/note/${newPage.id}`, { replace: true });
           } catch (err) {
             console.warn('Failed to register online note with backend:', err);
@@ -138,7 +140,7 @@ export function useAutoSave(noteId: string, delay = 500) {
         }
       }, Math.max(delay, 1000)); // backend debounce: at least 1s
     },
-    [noteId, delay, updateNote, replaceNote, notes, isAuthenticated, isGuest, workspace, spaces, navigate]
+    [noteId, delay, updateNote, replaceNote, notes, isAuthenticated, isGuest, onlineSpaceId, navigate]
   );
 
   return save;

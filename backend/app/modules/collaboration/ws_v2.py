@@ -29,6 +29,74 @@ from app.dependencies.rate_limit import get_websocket_rate_limiter
 
 logger = logging.getLogger(__name__)
 
+# ── Yjs / y-websocket sync protocol helpers ───────────────────────────────────
+# y-websocket frames every binary message as:
+#   [MSG_SYNC(varint)] [syncSubtype(varint)] [payloadLen(varint)] [...payload]
+# These helpers let the server extract pure Yjs update bytes from incoming
+# messages and re-wrap them in the correct envelope when sending to new clients.
+_MSG_SYNC = 0       # outer message type for all Yjs sync messages
+_SYNC_STEP1 = 0     # client → server: "here is my state vector" (request only)
+_SYNC_STEP2 = 1     # server → client: "here is what you're missing" (carries state)
+_SYNC_UPDATE = 2    # bidirectional: incremental update (carries state)
+
+
+def _read_varint(data: bytes, pos: int) -> tuple[int, int]:
+    """Decode a lib0 variable-length uint. Returns (value, new_pos)."""
+    result, shift = 0, 0
+    while pos < len(data):
+        b = data[pos]
+        pos += 1
+        result |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            break
+        shift += 7
+    return result, pos
+
+
+def _write_varint(n: int) -> bytes:
+    """Encode an integer as a lib0 variable-length uint."""
+    buf = bytearray()
+    while n > 127:
+        buf.append((n & 0x7F) | 0x80)
+        n >>= 7
+    buf.append(n)
+    return bytes(buf)
+
+
+def extract_yjs_update(raw_msg: bytes) -> bytes | None:
+    """
+    Extract the raw Yjs update bytes from a y-websocket binary message.
+
+    Returns the payload bytes for SYNC_STEP2 and SYNC_UPDATE messages.
+    Returns None for SYNC_STEP1 (state-vector requests carry no document state)
+    and for awareness / unknown message types.
+    """
+    if len(raw_msg) < 2:
+        return None
+    pos = 0
+    msg_type, pos = _read_varint(raw_msg, pos)
+    if msg_type != _MSG_SYNC:
+        return None  # e.g. awareness message — not a state-carrying sync message
+    sync_type, pos = _read_varint(raw_msg, pos)
+    if sync_type not in (_SYNC_STEP2, _SYNC_UPDATE):
+        return None  # SYNC_STEP1 is a request, not state
+    payload_len, pos = _read_varint(raw_msg, pos)
+    return raw_msg[pos: pos + payload_len]
+
+
+def make_sync_step2(update_bytes: bytes) -> bytes:
+    """
+    Wrap raw Yjs update bytes in a y-websocket sync step 2 envelope.
+
+    This is what the server sends to a newly connected client so it receives
+    the full document state in a format y-websocket knows how to apply.
+    Format: [MSG_SYNC] [SYNC_STEP2] [varint(len)] [...update_bytes]
+    """
+    return bytes([_MSG_SYNC, _SYNC_STEP2]) + _write_varint(len(update_bytes)) + update_bytes
+
+
+# ── End Yjs helpers ───────────────────────────────────────────────────────────
+
 # Track active (accepted) WebSocket connections per IP — resets with every process restart.
 # This is intentionally a plain dict (not Redis) so a server restart always clears it.
 _active_ws_connections: dict[str, int] = {}
@@ -127,6 +195,9 @@ class YjsRoom:
         self.lock = asyncio.Lock()
         self._persist_task: Optional[asyncio.Task] = None
         self._shutdown = False
+        # Accumulates *pure* Yjs update bytes (no y-websocket protocol framing).
+        # Populated by handle_update; flushed to DB by _persist_to_db.
+        self._pending_update_bytes: list[bytes] = []
     
     async def start_persistence_task(self):
         """Start background persistence task."""
@@ -168,13 +239,16 @@ class YjsRoom:
             self.clients[connection_id] = websocket
             self.permissions[connection_id] = ctx
             
-            # Register in Redis
-            await self.redis.join_room(
-                self.page_id, 
-                connection_id, 
-                str(ctx.user_id),
-                ctx.role
-            )
+            # Register in Redis (best-effort — in-process clients dict is authoritative)
+            try:
+                await self.redis.join_room(
+                    self.page_id,
+                    connection_id,
+                    str(ctx.user_id),
+                    ctx.role
+                )
+            except Exception as _redis_err:
+                logger.warning(f"Redis join_room error (non-fatal): {_redis_err}")
             
             # Log session start — use None for synthetic share-token users
             # since their UUID doesn't exist in the `users` table.
@@ -220,8 +294,12 @@ class YjsRoom:
             websocket = self.clients.pop(connection_id, None)
             ctx = self.permissions.pop(connection_id, None)
             
-            # Update Redis
-            remaining = await self.redis.leave_room(self.page_id, connection_id)
+            # Update Redis (best-effort)
+            try:
+                remaining = await self.redis.leave_room(self.page_id, connection_id)
+            except Exception as _redis_err:
+                logger.warning(f"Redis leave_room error (non-fatal): {_redis_err}")
+                remaining = len(self.clients)
             
             # Update database session
             if ctx:
@@ -287,9 +365,20 @@ class YjsRoom:
                     })
                 return False
             
-            # Queue for persistence
-            await self.redis.queue_update(self.page_id, update)
-            
+            # Extract pure Yjs update bytes (strips y-websocket protocol framing)
+            # and accumulate for persistence.  We only accumulate SYNC_UPDATE and
+            # SYNC_STEP2 payloads — SYNC_STEP1 carries no document state.
+            pure_bytes = extract_yjs_update(update)
+            if pure_bytes:
+                self._pending_update_bytes.append(pure_bytes)
+
+            # Queue for Redis so other server instances can broadcast to their clients.
+            # Non-fatal: if Redis is unavailable the in-process broadcast below still works.
+            try:
+                await self.redis.queue_update(self.page_id, update)
+            except Exception as _redis_err:
+                logger.warning(f"Redis queue error for page {self.page_id} (non-fatal): {_redis_err}")
+
             # Log edit (throttled) — use None for synthetic share-token users.
             if len(update) > 10:  # Skip tiny updates (cursor movements, etc)
                 log_user_id = None if ctx.is_synthetic else ctx.user_id
@@ -303,16 +392,18 @@ class YjsRoom:
     
     async def _broadcast(self, message: bytes, exclude: Optional[str] = None):
         """Broadcast message to all clients except excluded one."""
+        # Snapshot to avoid RuntimeError if self.clients is modified at an await point
+        clients_snapshot = list(self.clients.items())
         disconnected = []
-        
-        for conn_id, client in self.clients.items():
+
+        for conn_id, client in clients_snapshot:
             if conn_id == exclude:
                 continue
             try:
                 await client.send_bytes(message)
             except Exception:
                 disconnected.append(conn_id)
-        
+
         # Cleanup disconnected clients
         for conn_id in disconnected:
             await self.leave(conn_id)
@@ -327,44 +418,57 @@ class YjsRoom:
                 logger.error(f"Failed to send state: {e}")
     
     async def _persist_to_db(self):
-        """Persist accumulated updates to database."""
+        """
+        Persist accumulated Yjs update bytes to the database.
+
+        We store *pure* Yjs update bytes (no y-websocket protocol framing).
+        On next load, the stored bytes are wrapped in a sync step 2 envelope
+        before being sent to connecting clients so y-websocket can parse them.
+
+        Appending new bytes to existing state is valid: Yjs applies updates
+        sequentially, so [old_state || new_update_1 || new_update_2 ...] is
+        equivalent to applying each update in order to a Y.Doc.
+        """
+        if not self._pending_update_bytes:
+            return
+
+        # Drain the pending list before async DB work so concurrent calls
+        # (periodic task + final flush on room close) don't double-persist.
+        pending, self._pending_update_bytes = self._pending_update_bytes, []
+        new_bytes = b"".join(pending)
+
+        db = SessionLocal()
         try:
-            updates = await self.redis.get_pending_updates(self.page_id)
-            if not updates:
-                return
-            
-            # Combine all updates into final state
-            # Note: In production, you'd use Yjs merge logic
-            combined = b"".join(updates)
-            
-            db = SessionLocal()
-            try:
-                doc = db.query(YjsDocument).filter(
-                    YjsDocument.page_id == self.page_id
-                ).first()
-                
-                if doc:
-                    doc.state_vector = combined
-                    doc.version = (doc.version or 0) + 1
-                    doc.client_count = len(self.clients)
-                else:
-                    doc = YjsDocument(
-                        page_id=uuid.UUID(self.page_id),
-                        state_vector=combined,
-                        version=1,
-                        client_count=len(self.clients)
-                    )
-                    db.add(doc)
-                
-                db.commit()
-                logger.debug(f"Persisted {len(updates)} updates for page {self.page_id}")
-            except Exception as e:
-                logger.error(f"Failed to persist state: {e}")
-            finally:
-                db.close()
-                
+            doc = db.query(YjsDocument).filter(
+                YjsDocument.page_id == self.page_id
+            ).first()
+
+            if doc:
+                # Append new updates to existing state so nothing is lost.
+                existing = doc.state_vector or b""
+                doc.state_vector = existing + new_bytes
+                doc.version = (doc.version or 0) + 1
+                doc.client_count = len(self.clients)
+            else:
+                doc = YjsDocument(
+                    page_id=uuid.UUID(self.page_id),
+                    state_vector=new_bytes,
+                    version=1,
+                    client_count=len(self.clients),
+                )
+                db.add(doc)
+
+            db.commit()
+            logger.debug(
+                f"Persisted {len(pending)} Yjs updates ({len(new_bytes)} bytes) "
+                f"for page {self.page_id}"
+            )
         except Exception as e:
-            logger.error(f"Persistence error: {e}")
+            logger.error(f"Failed to persist Yjs state for page {self.page_id}: {e}")
+            # Put the bytes back so they're not silently lost on transient DB errors.
+            self._pending_update_bytes = pending + self._pending_update_bytes
+        finally:
+            db.close()
     
     async def _log_activity(
         self, 
@@ -533,12 +637,19 @@ async def collab_websocket_v2(
         ip_address=client_ip
     )
     
-    # Send initial state if available
+    # Send initial state if available.
+    # The stored state_vector contains raw Yjs update bytes (no protocol framing).
+    # We must wrap them in a sync step 2 envelope so y-websocket can parse them.
     db = SessionLocal()
     try:
         doc = db.query(YjsDocument).filter(YjsDocument.page_id == page_id).first()
         if doc and doc.state_vector:
-            await room.send_state_vector(connection_id, doc.state_vector)
+            sync_msg = make_sync_step2(doc.state_vector)
+            await room.send_state_vector(connection_id, sync_msg)
+            logger.debug(
+                f"Sent initial Yjs state ({len(doc.state_vector)} bytes) "
+                f"to connection {connection_id} for page {page_id}"
+            )
     finally:
         db.close()
     
@@ -546,7 +657,13 @@ async def collab_websocket_v2(
     try:
         while True:
             message = await websocket.receive()
-            
+
+            # raw receive() returns {"type": "websocket.disconnect"} instead of
+            # raising WebSocketDisconnect.  Calling receive() again after that
+            # raises RuntimeError, so we must break here explicitly.
+            if message.get("type") == "websocket.disconnect":
+                break
+
             # Rate limit: Check message rate
             if not await ws_rate_limiter.check_message_allowed(client_ip):
                 logger.warning(f"WebSocket message rate limit exceeded for IP: {client_ip}")

@@ -101,10 +101,16 @@ def get_page(
     page = crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
+
     workspace = crud.get_workspace(db, page.workspace_id)
-    if not workspace or workspace.owner_id != current_user.id:
-        # TODO: Check sharing permissions too
-        raise HTTPException(status_code=403, detail="Not authorized")
+    is_owner = workspace and workspace.owner_id == current_user.id
+
+    if not is_owner:
+        # Check whether the user has been explicitly shared this page
+        from app.modules.sharing import crud as sharing_crud
+        if not sharing_crud.check_access(db, current_user.id, page_id, "viewer"):
+            raise HTTPException(status_code=403, detail="Not authorized")
+
     return page
 
 
@@ -120,8 +126,11 @@ def update_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
     workspace = crud.get_workspace(db, page.workspace_id)
-    if not workspace or workspace.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    is_owner = workspace and workspace.owner_id == current_user.id
+    if not is_owner:
+        from app.modules.sharing import crud as sharing_crud
+        if not sharing_crud.check_access(db, current_user.id, page_id, "editor"):
+            raise HTTPException(status_code=403, detail="Not authorized")
     return crud.update_page(db, page, data, current_user.id)
 
 

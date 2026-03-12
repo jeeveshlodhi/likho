@@ -18,6 +18,7 @@ import TempNotesDashboard from "@/pages/dashboard/TempNotesDashboard";
 import { WorkspaceHealth } from "@/pages/dashboard/WorkspaceHealth";
 import { WorkspaceRagChat } from "@/pages/dashboard/WorkspaceRagChat";
 import { WorkspaceDigest } from "@/pages/dashboard/WorkspaceDigest";
+import SharedWithMe from "@/pages/dashboard/SharedWithMe";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
 import { isTauri } from "@/utils/platform";
@@ -59,6 +60,7 @@ function App() {
         <Route path="workspace-health" element={<WorkspaceHealth />} />
         <Route path="ai-chat" element={<WorkspaceRagChat />} />
         <Route path="digest" element={<WorkspaceDigest />} />
+        <Route path="shared-with-me" element={<SharedWithMe />} />
       </Route>
     </Routes>
   );
