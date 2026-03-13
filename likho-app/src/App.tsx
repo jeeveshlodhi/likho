@@ -17,6 +17,7 @@ import TagView from "@/pages/dashboard/TagView";
 import TempNotesDashboard from "@/pages/dashboard/TempNotesDashboard";
 import { WorkspaceHealth } from "@/pages/dashboard/WorkspaceHealth";
 import { WorkspaceRagChat } from "@/pages/dashboard/WorkspaceRagChat";
+import { AiChat } from "@/pages/dashboard/AiChat";
 import { WorkspaceDigest } from "@/pages/dashboard/WorkspaceDigest";
 import SharedWithMe from "@/pages/dashboard/SharedWithMe";
 import { AutoGroupNotes } from "@/pages/dashboard/AutoGroupNotes";
@@ -59,7 +60,8 @@ function App() {
         <Route path="graph" element={<GraphView />} />
         <Route path="temp-notes" element={<TempNotesDashboard />} />
         <Route path="workspace-health" element={<WorkspaceHealth />} />
-        <Route path="ai-chat" element={<WorkspaceRagChat />} />
+        <Route path="ai-chat" element={<AiChat />} />
+        <Route path="ai-chat-rag" element={<WorkspaceRagChat />} />
         <Route path="digest" element={<WorkspaceDigest />} />
         <Route path="shared-with-me" element={<SharedWithMe />} />
         <Route path="auto-group" element={<AutoGroupNotes />} />

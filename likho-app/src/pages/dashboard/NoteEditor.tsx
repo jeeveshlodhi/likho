@@ -52,6 +52,7 @@ import {
 } from "@blocknote/react";
 import '@blocknote/shadcn/style.css';
 import { Sparkles, Share2, Hash, Link2, MessageSquare, Eye } from 'lucide-react';
+import { useAiChatStore } from '@/store/aiChatStore';
 import { AskAIBlock } from '@/components/dashboard/editor/AskAIBlock';
 import { WikilinkBlock } from '@/components/dashboard/editor/WikilinkBlock';
 import { TagBlock } from '@/components/dashboard/editor/TagBlock';
@@ -192,6 +193,7 @@ function NoteEditorBody({
   const [linkQuery, setLinkQuery] = useState('');
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
   const { theme } = useTheme();
+  const { setNoteContext } = useAiChatStore();
 
   const editor = useCreateBlockNote({
     schema,
@@ -210,6 +212,36 @@ function NoteEditorBody({
         }
       : undefined,
   });
+
+  // ── AI context: push note plain-text to aiChatStore so the floating panel
+  //    has context about the currently open note. Clear on unmount.
+  useEffect(() => {
+    if (!note) return;
+    const extractText = () => {
+      if (!editor) return '';
+      return editor.document
+        .flatMap((b: any) => b.content ?? [])
+        .filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text)
+        .join(' ');
+    };
+    setNoteContext(extractText(), note.title || 'Untitled', note.id);
+    return () => setNoteContext(null, null, null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id, note?.title]);
+
+  // ── AI insert: listen for ai:insert-content events dispatched from AiChat
+  useEffect(() => {
+    if (!editor || isReadOnly) return;
+    const handler = (e: Event) => {
+      const blocks = (e as CustomEvent).detail?.blocks;
+      if (!Array.isArray(blocks) || blocks.length === 0) return;
+      const currentBlock = editor.getTextCursorPosition().block;
+      editor.insertBlocks(blocks, currentBlock, 'after');
+    };
+    window.addEventListener('ai:insert-content', handler);
+    return () => window.removeEventListener('ai:insert-content', handler);
+  }, [editor, isReadOnly]);
 
   // Link scanning timeout ref
   const linkScanTimeoutRef = useRef<NodeJS.Timeout | null>(null);

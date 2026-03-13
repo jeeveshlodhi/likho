@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users, FolderOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users, FolderOpen, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
@@ -9,6 +9,7 @@ import { SidebarSearch } from '@/components/search';
 import { useTempNotesStore } from '@/store/tempNotesStore';
 import { isBefore, parseISO } from 'date-fns';
 import { useSharedWithMe } from '@/hooks/useSharedWithMe';
+import { useAiChatStore } from '@/store/aiChatStore';
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
@@ -17,6 +18,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { notes: tempNotes, setQuickCaptureOpen } = useTempNotesStore();
   const { data: sharedWithMe = [] } = useSharedWithMe();
+  const { togglePanel } = useAiChatStore();
   const sharedCount = sharedWithMe.length;
   const now = new Date();
   const activeTempCount = tempNotes.filter(
@@ -36,6 +38,14 @@ export default function Sidebar() {
           </button>
         </div>
         <div className="flex flex-col items-center gap-2 py-2">
+          {/* Ask AI — primary action */}
+          <button
+            onClick={togglePanel}
+            title="Ask AI (⌘J)"
+            className="rounded-md p-1.5 text-violet-500 hover:bg-violet-500/10 hover:text-violet-600 transition-colors"
+          >
+            <Sparkles size={18} />
+          </button>
           <SidebarSearch collapsed />
           <button
             onClick={() => navigate('/dashboard/temp-notes')}
@@ -115,6 +125,19 @@ export default function Sidebar() {
             <PanelLeftClose size={16} />
           </button>
         </div>
+      </div>
+
+      {/* Ask AI — primary action button */}
+      <div className="px-2 pt-2.5 pb-1">
+        <button
+          onClick={togglePanel}
+          className="w-full flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-violet-500/15 to-indigo-500/15 border border-violet-500/20 px-3 py-2 text-sm font-medium text-violet-700 dark:text-violet-300 hover:from-violet-500/25 hover:to-indigo-500/25 transition-colors"
+          title="Ask AI (⌘J)"
+        >
+          <Sparkles size={15} className="text-violet-500 shrink-0" />
+          Ask AI
+          <span className="ml-auto text-[10px] font-normal opacity-60">⌘J</span>
+        </button>
       </div>
 
       {/* Spaces */}

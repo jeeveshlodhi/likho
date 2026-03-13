@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
 import { isTauri } from '@/utils/platform';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Github } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,7 +12,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -26,8 +26,8 @@ const Navbar = () => {
   const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'Templates', href: '#templates' },
-    { label: 'Docs', href: '#docs' },
     { label: 'Pricing', href: '#pricing' },
+    { label: 'Docs', href: '#docs' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -40,66 +40,94 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-background/80 backdrop-blur-xl border-b border-border/50'
-          : 'bg-transparent'
-      }`}
+      style={{
+        backgroundColor: isScrolled ? 'rgba(255,255,255,0.95)' : '#ffffff',
+        borderBottom: isScrolled ? '1px solid #e5e7eb' : '1px solid transparent',
+        backdropFilter: isScrolled ? 'blur(12px)' : 'none',
+      }}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2 text-xl font-semibold text-foreground hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-lg font-semibold"
+            style={{ color: '#111827' }}
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#111827' }}
+            >
               <span className="text-white text-sm font-bold">L</span>
             </div>
             <span>Likho</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-7">
             {navLinks.map((link) => (
               <button
                 key={link.label}
                 onClick={() => scrollToSection(link.href)}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium transition-colors"
+                style={{ color: '#6b7280' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
               >
                 {link.label}
               </button>
             ))}
+            <a
+              href="https://github.com/likho/likho"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors"
+              style={{ color: '#6b7280' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+            >
+              <Github className="w-4 h-4" />
+              <span>3.2k</span>
+            </a>
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
             {isTauri() && (
               <button
                 onClick={handleGuestAccess}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{ color: '#374151' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 Continue as Guest
               </button>
             )}
             <Link
               to="/auth/sign-in"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+              className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              style={{ color: '#374151' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              Sign In
+              Sign in
             </Link>
             <Link
               to="/auth/sign-up"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+              className="inline-flex items-center px-4 py-1.5 text-sm font-semibold rounded-lg transition-opacity hover:opacity-90"
+              style={{ backgroundColor: '#111827', color: '#ffffff' }}
             >
-              Start writing
+              Get Started
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="md:hidden p-2 rounded-lg transition-colors"
+            style={{ color: '#6b7280' }}
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -107,29 +135,35 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border/50">
-            <div className="flex flex-col gap-2">
+          <div
+            className="md:hidden py-4"
+            style={{ borderTop: '1px solid #e5e7eb' }}
+          >
+            <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <button
                   key={link.label}
                   onClick={() => scrollToSection(link.href)}
-                  className="text-left px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                  className="text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                  style={{ color: '#374151' }}
                 >
                   {link.label}
                 </button>
               ))}
-              <div className="border-t border-border/50 pt-2 mt-2 flex flex-col gap-2">
+              <div className="pt-2 mt-2 flex flex-col gap-2" style={{ borderTop: '1px solid #e5e7eb' }}>
                 <Link
                   to="/auth/sign-in"
-                  className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="px-3 py-2 text-sm font-medium"
+                  style={{ color: '#374151' }}
                 >
-                  Sign In
+                  Sign in
                 </Link>
                 <Link
                   to="/auth/sign-up"
-                  className="mx-3 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-lg hover:opacity-90 transition-opacity text-center"
+                  className="mx-3 px-4 py-2 text-sm font-semibold rounded-lg text-center"
+                  style={{ backgroundColor: '#111827', color: '#ffffff' }}
                 >
-                  Start writing
+                  Get Started
                 </Link>
               </div>
             </div>

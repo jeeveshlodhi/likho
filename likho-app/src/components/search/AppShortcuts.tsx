@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { X } from "lucide-react";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 import { SearchDialog } from "@/components/search/SearchDialog";
 import { RagChat } from "@/components/search/RagChat";
 import { LlmSettingsDialog } from "@/components/search/LlmSettingsDialog";
 import { ShortcutsHelp } from "@/components/search/ShortcutsHelp";
 import { useTempNotesStore } from "@/store/tempNotesStore";
+import { useAiChatStore } from "@/store/aiChatStore";
+import { AiChat } from "@/pages/dashboard/AiChat";
 
 export function AppShortcuts() {
   const navigate = useNavigate();
@@ -14,77 +17,68 @@ export function AppShortcuts() {
   const [showLlmSettings, setShowLlmSettings] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const { setQuickCaptureOpen } = useTempNotesStore();
+  const { panelOpen, togglePanel, setPanelOpen } = useAiChatStore();
+
+  // ── Shortcuts ────────────────────────────────────────────────────────────────
 
   // Cmd+K - Search
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+K: Opening search");
-      setShowSearch(true);
-    },
+    () => setShowSearch(true),
     { key: "k", meta: true }
   );
 
-  // Cmd+Shift+A - AI Chat
+  // Cmd+J - Toggle AI panel (primary AI shortcut)
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+A: Opening AI chat");
-      setShowRagChat(true);
-    },
+    () => togglePanel(),
+    { key: "j", meta: true }
+  );
+
+  // Cmd+Shift+A - AI Chat (legacy, opens panel)
+  useKeyboardShortcut(
+    () => { setShowRagChat(true); },
     { key: "a", meta: true, shift: true }
   );
 
   // Cmd+Shift+L - LLM Settings
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+L: Opening LLM settings");
-      setShowLlmSettings(true);
-    },
+    () => setShowLlmSettings(true),
     { key: "l", meta: true, shift: true }
   );
 
   // Shift+? - Shortcuts Help
   useKeyboardShortcut(
-    () => {
-      console.log("Shift+?: Opening shortcuts help");
-      setShowShortcutsHelp(true);
-    },
+    () => setShowShortcutsHelp(true),
     { key: "?", shift: true }
   );
 
   // Cmd+Shift+G - Graph View
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+G: Navigating to graph view");
-      navigate("/dashboard/graph");
-    },
+    () => navigate("/dashboard/graph"),
     { key: "g", meta: true, shift: true }
   );
 
   // Cmd+Shift+T - Tags
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+T: Navigating to tags");
-      navigate("/dashboard/tags");
-    },
+    () => navigate("/dashboard/tags"),
     { key: "t", meta: true, shift: true }
   );
 
   // Cmd+Shift+S - Settings
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+S: Navigating to settings");
-      navigate("/dashboard/settings");
-    },
+    () => navigate("/dashboard/settings"),
     { key: "s", meta: true, shift: true }
   );
 
   // Cmd+Shift+N - Quick capture temp note
   useKeyboardShortcut(
-    () => {
-      console.log("Cmd+Shift+N: Opening quick capture");
-      setQuickCaptureOpen(true);
-    },
+    () => setQuickCaptureOpen(true),
     { key: "n", meta: true, shift: true }
+  );
+
+  // Escape - close AI panel
+  useKeyboardShortcut(
+    () => { if (panelOpen) setPanelOpen(false); },
+    { key: "Escape", preventDefault: false }
   );
 
   return (
@@ -100,7 +94,7 @@ export function AppShortcuts() {
         }}
       />
 
-      {/* RAG Chat Panel */}
+      {/* Legacy RAG Chat Panel (Cmd+Shift+A) */}
       {showRagChat && (
         <div className="fixed inset-y-0 right-0 z-40 w-[400px] border-l bg-white shadow-xl">
           <div className="flex h-full flex-col">
@@ -118,6 +112,37 @@ export function AppShortcuts() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── AI Panel (Cmd+J) ── */}
+      {panelOpen && (
+        <>
+          {/* Backdrop (click to close) */}
+          <div
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+            onClick={() => setPanelOpen(false)}
+          />
+
+          {/* Panel */}
+          <div className="fixed inset-y-0 right-0 z-50 flex w-[420px] flex-col border-l border-border bg-background shadow-2xl">
+            {/* Panel header */}
+            <div className="flex items-center justify-between shrink-0 border-b border-border px-3 py-2">
+              <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
+              <button
+                onClick={() => setPanelOpen(false)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                title="Close (Esc)"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Chat fills the rest */}
+            <div className="flex-1 min-h-0">
+              <AiChat compact />
+            </div>
+          </div>
+        </>
       )}
 
       {/* LLM Settings Dialog */}
