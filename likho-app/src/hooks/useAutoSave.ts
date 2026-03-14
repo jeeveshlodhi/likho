@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
 import { createPage, updatePage } from '@/lib/workspaceApi';
 import { SearchService } from '@/lib/search-service';
+import { isTauri } from '@/utils/platform';
 import type { Note } from '@/types/workspace';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -44,9 +45,9 @@ export function useAutoSave(noteId: string, onlineSpaceId?: string, delay = 500)
       localTimeoutRef.current = setTimeout(() => {
         updateNote(noteId, updates);
 
-        // Sync note to local Rust DB then index for RAG search
+        // Sync note to local Rust DB and index for RAG only in Tauri desktop (invoke is undefined in web)
         const note = notes.find((n) => n.id === noteId);
-        if (note) {
+        if (note && isTauri()) {
           const contentVal = updates.content !== undefined ? updates.content : note.content;
           const contentStr =
             contentVal == null

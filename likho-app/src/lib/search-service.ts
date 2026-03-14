@@ -15,6 +15,7 @@ import {
   RelatedNote,
   TopicGroup,
 } from "../types/search";
+import { isTauri } from "@/utils/platform";
 
 export class SearchService {
   /**
@@ -54,28 +55,42 @@ export class SearchService {
   }
 
   /**
-   * Index a note for search (chunk and generate embeddings)
+   * Index a note for search (chunk and generate embeddings).
+   * No-op in web build — Tauri invoke is not available.
    */
   static async indexNote(noteId: string): Promise<void> {
+    if (!isTauri()) return;
+    if (typeof invoke !== "function") return;
     try {
       console.log("[SearchService] Indexing note:", noteId);
       await invoke("index_note", { noteId });
       console.log("[SearchService] Note indexed successfully:", noteId);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("invoke") || msg.includes("undefined")) {
+        return;
+      }
       console.error("[SearchService] Indexing error:", error);
       throw new Error(`Failed to index note: ${error}`);
     }
   }
 
   /**
-   * Sync a note from frontend to backend database
+   * Sync a note from frontend to backend database.
+   * No-op in web build — Tauri invoke is not available.
    */
   static async syncNote(note: Note): Promise<void> {
+    if (!isTauri()) return;
+    if (typeof invoke !== "function") return;
     try {
       console.log("[SearchService] Syncing note:", note.id);
       await invoke("sync_note", { note });
       console.log("[SearchService] Note synced successfully:", note.id);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("invoke") || msg.includes("undefined")) {
+        return; // Web or missing Tauri — no-op instead of throwing
+      }
       console.error("[SearchService] Sync error:", error);
       throw new Error(`Failed to sync note: ${error}`);
     }
