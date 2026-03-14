@@ -69,11 +69,11 @@ export interface ErrorLog {
   resolved: boolean;
 }
 
-// App Version types
+// App Version types (backend may return platform "all" for desktop)
 export interface AppVersion {
   id: string;
   version: string;
-  platform: 'ios' | 'android' | 'desktop' | 'web';
+  platform: 'ios' | 'android' | 'desktop' | 'web' | 'all';
   release_notes?: string;
   force_update: boolean;
   min_required_version?: string;

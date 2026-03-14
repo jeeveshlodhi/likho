@@ -5,6 +5,7 @@ import { FeatureFlags } from '@/pages/FeatureFlags';
 import { RemoteConfigPage } from '@/pages/RemoteConfig';
 import { FeedbackPage } from '@/pages/Feedback';
 import { VersionsPage } from '@/pages/Versions';
+import { ReleasesPage } from '@/pages/Releases';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="releases" element={<ReleasesPage />} />
           <Route path="feature-flags" element={<FeatureFlags />} />
           <Route path="remote-config" element={<RemoteConfigPage />} />
           <Route path="feedback" element={<FeedbackPage />} />

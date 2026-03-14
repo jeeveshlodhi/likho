@@ -6,6 +6,7 @@ import {
   Settings,
   MessageSquare,
   Package,
+  Rocket,
   Menu,
   X,
   RefreshCw,
@@ -14,10 +15,11 @@ import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Releases', href: '/releases', icon: Rocket },
+  { name: 'Versions', href: '/versions', icon: Package },
   { name: 'Feature Flags', href: '/feature-flags', icon: Flag },
   { name: 'Remote Config', href: '/remote-config', icon: Settings },
   { name: 'Feedback', href: '/feedback', icon: MessageSquare },
-  { name: 'Versions', href: '/versions', icon: Package },
 ];
 
 export function Layout() {

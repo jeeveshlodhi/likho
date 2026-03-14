@@ -47,6 +47,21 @@ class Settings(BaseSettings):
     # Graceful degradation: if True, allows requests when Redis is down
     RATE_LIMIT_GRACEFUL_DEGRADATION: bool = True
 
+    # S3 releases bucket (optional; leave empty to disable presigned upload)
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_RELEASES_BUCKET: str = ""
+    AWS_REGION: str = "us-east-1"
+    AWS_RELEASES_PREFIX: str = "releases"
+
+    @property
+    def s3_releases_configured(self) -> bool:
+        return bool(
+            self.AWS_ACCESS_KEY_ID
+            and self.AWS_SECRET_ACCESS_KEY
+            and self.AWS_RELEASES_BUCKET
+        )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

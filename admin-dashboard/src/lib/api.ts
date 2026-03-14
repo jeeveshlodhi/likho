@@ -180,6 +180,16 @@ class ApiClient {
     await this.client.delete(`/admin/versions/${id}`);
   }
 
+  // ===== Releases (build, S3 upload) =====
+  /** Get presigned S3 upload URL for a build artifact. Returns { upload_url, public_url } or throws. */
+  async getPresignedUploadUrl(filename: string): Promise<{ upload_url: string; public_url: string }> {
+    const response = await this.client.get<{ upload_url: string; public_url: string }>(
+      '/admin/releases/presigned-upload',
+      { params: { filename } }
+    );
+    return response.data;
+  }
+
   // ===== Users =====
   async getUsers(page = 1, limit = 20): Promise<{ items: User[]; total: number; page: number; pages: number }> {
     const response = await this.client.get(`/admin/users?page=${page}&limit=${limit}`);

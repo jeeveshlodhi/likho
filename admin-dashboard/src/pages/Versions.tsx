@@ -16,7 +16,7 @@ import type { AppVersion } from '@/types';
 
 interface VersionFormData {
   version: string;
-  platform: 'ios' | 'android' | 'desktop' | 'web';
+  platform: 'ios' | 'android' | 'desktop' | 'web' | 'all';
   release_notes: string;
   force_update: boolean;
   min_required_version: string;
@@ -334,10 +334,11 @@ export function VersionsPage() {
                     }
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
+                    <option value="desktop">Desktop</option>
+                    <option value="all">All (single desktop URL)</option>
+                    <option value="web">Web</option>
                     <option value="ios">iOS</option>
                     <option value="android">Android</option>
-                    <option value="desktop">Desktop</option>
-                    <option value="web">Web</option>
                   </select>
                 </div>
               </div>

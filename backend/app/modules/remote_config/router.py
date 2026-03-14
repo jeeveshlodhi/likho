@@ -18,11 +18,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_active_user
 from app.modules.users.models import User
 
 from . import crud, service
+from . import s3_releases as s3_releases_mod
 from .schemas import (
     # Responses
     FeatureFlagResponse,
@@ -235,6 +237,33 @@ def get_latest_desktop_release(
         status_code=404,
         detail="No desktop release found. Add a version with platform=all and update_url in the admin.",
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Admin Endpoints - Releases (S3 presigned upload)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@admin_router.get("/admin/releases/presigned-upload")
+def get_presigned_upload_url(
+    filename: str = Query(..., min_length=1, description="Release file name (e.g. likho-0.1.0.dmg)"),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Get a presigned S3 URL to upload a release artifact.
+    Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_RELEASES_BUCKET to be set.
+    Returns upload_url (PUT the file here) and public_url (use as download_url when registering).
+    """
+    if not settings.s3_releases_configured:
+        raise HTTPException(
+            status_code=503,
+            detail="S3 releases not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_RELEASES_BUCKET.",
+        )
+    try:
+        upload_url, public_url = s3_releases_mod.get_presigned_upload_url(filename)
+        return {"upload_url": upload_url, "public_url": public_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

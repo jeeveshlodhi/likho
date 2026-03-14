@@ -2,6 +2,24 @@
 
 The homepage shows a **Download for Desktop** button when a desktop release URL is available. The URL can come from the API (admin versions) or from an env variable.
 
+## Admin: Releases dashboard
+
+In the **admin dashboard** → **Releases** you can:
+
+- See the **current desktop release** and update policy (min version, force update).
+- Follow **Build & upload** steps (Tauri build command, S3 upload command, then register release).
+- **Upload build to S3** from the browser (if the backend has S3 configured).
+- **Register release**: version, platform (Desktop / All), download URL, release notes, min required version, force update.
+- View **recent versions** and link to **Versions** for full CRUD.
+
+To enable **direct upload to S3** from the admin, set in the backend `.env`:
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_RELEASES_BUCKET`
+- `AWS_REGION` (optional, default `us-east-1`)
+- `AWS_RELEASES_PREFIX` (optional, default `releases`)
+
 ## Option 1: Admin dashboard (recommended)
 
 1. Build the Tauri app and upload the installer to S3 (or any public URL).
