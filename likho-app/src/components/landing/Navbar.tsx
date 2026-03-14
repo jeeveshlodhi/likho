@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
 import { isTauri } from '@/utils/platform';
-import { Menu, X, Github } from 'lucide-react';
+import { useDesktopDownload } from '@/hooks/useDesktopDownload';
+import { Menu, X, Github, Download } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
+  const desktopRelease = useDesktopDownload();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,6 +96,20 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-2">
+            {desktopRelease && !isTauri() && (
+              <a
+                href={desktopRelease.download_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{ color: '#374151' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            )}
             {isTauri() && (
               <button
                 onClick={handleGuestAccess}
@@ -151,6 +167,18 @@ const Navbar = () => {
                 </button>
               ))}
               <div className="pt-2 mt-2 flex flex-col gap-2" style={{ borderTop: '1px solid #e5e7eb' }}>
+                {desktopRelease && !isTauri() && (
+                  <a
+                    href={desktopRelease.download_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
+                    style={{ color: '#374151', border: '1px solid #e5e7eb' }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download for Desktop
+                  </a>
+                )}
                 <Link
                   to="/auth/sign-in"
                   className="px-3 py-2 text-sm font-medium"

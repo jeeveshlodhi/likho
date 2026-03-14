@@ -96,6 +96,31 @@ docker logs frontend
 - **App (frontend):** `http://<EC2_PUBLIC_IP>:3000` — exposed to internet
 - **Backend API:** `http://<EC2_PUBLIC_IP>:5000` — exposed to internet (open Security Group ports 3000 and 5000)
 
+### "This site can't be reached" / "Took too long to respond"
+
+1. **Use the public IP, not 172.31.x.x**  
+   `172.31.x.x` is the **private** VPC IP. From your laptop/phone use the instance **public** IP (e.g. 13.201.52.168).  
+   - In AWS: EC2 → Instances → select the instance → **Public IPv4 address**.  
+   - On the EC2: `curl -s http://169.254.169.254/latest/meta-data/public-ipv4`
+
+2. **You must use port 3000 for the app.**  
+   Open: `http://13.201.52.168:3000` (not port 80).
+
+3. **Open the Security Group (most common fix for timeouts)**  
+   If the URL is correct and it still times out, the Security Group is blocking traffic.  
+   - AWS Console → **EC2** → **Security Groups**.  
+   - Select the security group attached to your instance (see "Security" tab on the instance).  
+   - **Edit inbound rules** → **Add rule**:
+     - Type: **Custom TCP** | Port: **3000** | Source: **0.0.0.0/0** | Description: Likho frontend
+     - Type: **Custom TCP** | Port: **5000** | Source: **0.0.0.0/0** | Description: Likho backend  
+   - **Save rules**. Wait a few seconds, then try `http://<PUBLIC_IP>:3000` again.
+
+4. **Verify from the EC2 that the app responds** (SSH into the instance):
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000
+   ```
+   You should see `200`. If you get 200 here but the browser still times out, the Security Group is blocking.
+
 ## 4. Optional: use the script
 
 From the repo root (e.g. after cloning on EC2):

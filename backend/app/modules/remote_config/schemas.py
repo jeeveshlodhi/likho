@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -126,8 +126,9 @@ class RemoteConfigCreate(RemoteConfigBase):
 
 
 class AppVersionCreate(AppVersionBase):
-    """Schema for creating a new app version."""
-    
+    """Schema for creating a new app version. Accepts download_url (alias for update_url) for admin dashboard."""
+    download_url: Optional[str] = None  # alias for update_url; admin form uses this name
+
     @field_validator("version", "min_required_version")
     @classmethod
     def validate_semver(cls, v: str) -> str:
@@ -136,6 +137,13 @@ class AppVersionCreate(AppVersionBase):
         if not re.match(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9._]+)?(\+[a-zA-Z0-9._]+)?$", v):
             raise ValueError("Version must follow semantic versioning (e.g., 1.2.3 or 1.2.3-beta.1)")
         return v
+
+    @model_validator(mode="after")
+    def copy_download_url_to_update_url(self) -> "AppVersionCreate":
+        """If download_url is set and update_url is not, use download_url for update_url."""
+        if self.download_url and self.update_url is None:
+            object.__setattr__(self, "update_url", self.download_url)
+        return self
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -187,18 +195,25 @@ class RemoteConfigUpdate(BaseModel):
 
 
 class AppVersionUpdate(BaseModel):
-    """Schema for updating an existing app version."""
+    """Schema for updating an existing app version. Accepts download_url (alias for update_url)."""
     build_number: Optional[int] = None
     is_latest: Optional[bool] = None
     min_required_version: Optional[str] = Field(None, max_length=20)
     force_update: Optional[bool] = None
     update_url: Optional[str] = None
+    download_url: Optional[str] = None
     release_notes: Optional[str] = None
     release_summary: Optional[str] = Field(None, max_length=500)
     file_size: Optional[int] = None
     file_hash: Optional[str] = Field(None, max_length=64)
     released_at: Optional[datetime] = None
-    
+
+    @model_validator(mode="after")
+    def copy_download_url_to_update_url(self) -> "AppVersionUpdate":
+        if self.download_url is not None and self.update_url is None:
+            object.__setattr__(self, "update_url", self.download_url)
+        return self
+
     @field_validator("min_required_version")
     @classmethod
     def validate_semver(cls, v: Optional[str]) -> Optional[str]:
@@ -235,11 +250,13 @@ class RemoteConfigResponse(RemoteConfigBase):
 
 
 class AppVersionResponse(AppVersionBase):
-    """Schema for app version responses."""
+    """Schema for app version responses. Serializes update_url as download_url for admin dashboard."""
     id: UUID
     created_at: datetime
     updated_at: datetime
-    
+    # Expose update_url as download_url in JSON for admin dashboard
+    update_url: Optional[str] = Field(None, serialization_alias="download_url")
+
     model_config = {"from_attributes": True}
 
 
@@ -298,6 +315,12 @@ class VersionInfoResponse(BaseModel):
     update_url: Optional[str]
     release_notes: Optional[str]
     release_summary: Optional[str]
+
+
+class DesktopReleaseResponse(BaseModel):
+    """Public schema for latest desktop app download (homepage Download button)."""
+    version: str
+    download_url: str
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

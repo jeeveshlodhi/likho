@@ -62,7 +62,16 @@ docker run -d \
   likho-frontend:latest
 
 echo "Done. Both exposed to all interfaces (internet)."
-echo "  Frontend: http://$(hostname -I 2>/dev/null | awk '{print $1}'):3000"
-echo "  Backend:  http://$(hostname -I 2>/dev/null | awk '{print $1}'):5000"
-echo "  On AWS: ensure Security Group allows inbound TCP 3000 and 5000."
+PRIVATE_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+# On AWS EC2, get public IP so you can open the app from your browser
+PUBLIC_IP=$(curl -s -m 2 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || true)
+if [ -n "$PUBLIC_IP" ]; then
+  echo "  Use these URLs from the internet (open Security Group inbound TCP 3000, 5000):"
+  echo "  Frontend: http://${PUBLIC_IP}:3000"
+  echo "  Backend:  http://${PUBLIC_IP}:5000"
+else
+  echo "  Frontend: http://${PRIVATE_IP:-localhost}:3000"
+  echo "  Backend:  http://${PRIVATE_IP:-localhost}:5000"
+  echo "  On AWS EC2: use the instance PUBLIC IP (not 172.31.x.x) and open Security Group ports 3000, 5000."
+fi
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

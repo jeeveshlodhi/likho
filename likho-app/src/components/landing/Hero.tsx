@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import {
   FileText, LayoutGrid, Palette, Sparkles,
-  ChevronRight, Lock, Database, Zap,
+  ChevronRight, Lock, Database, Zap, Download,
 } from 'lucide-react';
+import { useDesktopDownload } from '@/hooks/useDesktopDownload';
 
 const featureTabs = [
   {
@@ -169,6 +170,7 @@ const HeroMockup = ({ activeTab }: { activeTab: string }) => {
 
 const Hero = () => {
   const [activeTab, setActiveTab] = useState('notes');
+  const desktopRelease = useDesktopDownload();
 
   return (
     <section
@@ -239,7 +241,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 flex-wrap"
         >
           <Link
             to="/auth/sign-up"
@@ -248,6 +250,23 @@ const Hero = () => {
           >
             Get Started
           </Link>
+          {desktopRelease && (
+            <a
+              href={desktopRelease.download_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-opacity hover:opacity-90"
+              style={{
+                backgroundColor: '#ffffff',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Download for Desktop
+            </a>
+          )}
           <button
             onClick={() => document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-colors"

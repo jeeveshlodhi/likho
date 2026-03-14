@@ -32,6 +32,7 @@ from .schemas import (
     DeviceConfigResponse,
     FeatureCheckResponse,
     VersionInfoResponse,
+    DesktopReleaseResponse,
     # Create/Update
     FeatureFlagCreate,
     FeatureFlagUpdate,
@@ -211,6 +212,29 @@ def check_maintenance_mode(
     If maintenance mode is on, the app should show a maintenance screen.
     """
     return service.is_maintenance_mode(db)
+
+
+@public_router.get("/config/releases/desktop", response_model=DesktopReleaseResponse)
+def get_latest_desktop_release(
+    db: Session = Depends(get_db),
+):
+    """
+    Get the latest desktop app download URL for the homepage Download button.
+    No auth required. Returns version and download_url (e.g. S3 or CloudFront).
+    Use a version with platform=all and update_url set to your Tauri build URL.
+    """
+    # Prefer "all" so one desktop entry works for all OSes; else fall back to any desktop-like platform
+    for platform in ("all", "macos", "windows", "linux"):
+        version = crud.get_latest_app_version(db, platform)
+        if version and version.update_url:
+            return DesktopReleaseResponse(
+                version=version.version,
+                download_url=version.update_url,
+            )
+    raise HTTPException(
+        status_code=404,
+        detail="No desktop release found. Add a version with platform=all and update_url in the admin.",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -472,9 +496,13 @@ def create_app_version(
 ):
     """Create a new app version (admin only)."""
     try:
+        version_data = data.model_dump()
+        version_data.pop("download_url", None)  # stored as update_url
+        if version_data.get("platform") == "desktop":
+            version_data["platform"] = "all"  # desktop -> all for single installer
         version = crud.create_app_version(
             db,
-            version_data=data.model_dump(),
+            version_data=version_data,
             changed_by=current_user.id,
         )
         return version
@@ -496,6 +524,9 @@ def update_app_version(
         raise HTTPException(status_code=404, detail="App version not found")
     
     update_data = data.model_dump(exclude_unset=True)
+    update_data.pop("download_url", None)  # stored as update_url
+    if update_data.get("platform") == "desktop":
+        update_data["platform"] = "all"
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
     
