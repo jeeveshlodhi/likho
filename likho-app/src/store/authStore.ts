@@ -57,14 +57,17 @@ export const useAuthStore = create<AuthState>()(
           isGuest: true,
         }),
 
-      logout: () =>
+      logout: () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
           isGuest: false,
-        }),
+        });
+      },
 
       reset: () =>
         set({

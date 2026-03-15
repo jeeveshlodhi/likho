@@ -107,7 +107,7 @@ const Navbar = () => {
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <Download className="w-4 h-4" />
-                Download
+                Tauro Desktop
               </a>
             )}
             {isTauri() && (
@@ -176,7 +176,7 @@ const Navbar = () => {
                     style={{ color: '#374151', border: '1px solid #e5e7eb' }}
                   >
                     <Download className="w-4 h-4" />
-                    Download for Desktop
+                    Download Tauro (Desktop)
                   </a>
                 )}
                 <Link

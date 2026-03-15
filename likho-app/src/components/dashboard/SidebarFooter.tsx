@@ -1,6 +1,7 @@
 import { LogIn, LogOut, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useAuth';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 interface SidebarFooterProps {
@@ -10,10 +11,14 @@ interface SidebarFooterProps {
 export default function SidebarFooter({ collapsed }: SidebarFooterProps) {
   const navigate = useNavigate();
   const { user, isGuest, logout } = useAuthStore();
+  const { mutate: doLogout } = useLogout();
 
   const handleLogout = () => {
-    logout();
-    navigate('/auth/sign-in');
+    doLogout(undefined, {
+      onSettled: () => {
+        navigate('/auth/sign-in');
+      },
+    });
   };
 
   const handleSignIn = () => {

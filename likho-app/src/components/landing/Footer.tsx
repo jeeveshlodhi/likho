@@ -1,33 +1,42 @@
 import { Link } from 'react-router';
 import { Github, Twitter, MessageCircle } from 'lucide-react';
+import { useDesktopDownload } from '@/hooks/useDesktopDownload';
+import { isTauri } from '@/utils/platform';
 
-const footerLinks = {
+const footerLinks = (desktopDownloadUrl: string | null) => ({
   Product: [
-    { label: 'Features', href: '#features' },
-    { label: 'Templates', href: '#templates' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'Changelog', href: '#changelog' },
+    ...(desktopDownloadUrl && !isTauri()
+      ? [{ label: 'Download Tauro (Desktop)' as const, href: desktopDownloadUrl, external: true as const }]
+      : []),
+    { label: 'Features', href: '#features', external: false as const },
+    { label: 'Templates', href: '#templates', external: false as const },
+    { label: 'Pricing', href: '#pricing', external: false as const },
+    { label: 'Changelog', href: '#changelog', external: false as const },
   ],
   Resources: [
-    { label: 'Docs', href: '#docs' },
-    { label: 'API', href: '#api' },
-    { label: 'Community', href: '#community' },
-    { label: 'Support', href: '#support' },
+    { label: 'Docs', href: '#docs', external: false as const },
+    { label: 'API', href: '#api', external: false as const },
+    { label: 'Community', href: '#community', external: false as const },
+    { label: 'Support', href: '#support', external: false as const },
   ],
   Company: [
-    { label: 'About', href: '#about' },
-    { label: 'Blog', href: '#blog' },
-    { label: 'Careers', href: '#careers' },
-    { label: 'Contact', href: '#contact' },
+    { label: 'About', href: '#about', external: false as const },
+    { label: 'Blog', href: '#blog', external: false as const },
+    { label: 'Careers', href: '#careers', external: false as const },
+    { label: 'Contact', href: '#contact', external: false as const },
   ],
   Legal: [
-    { label: 'Privacy', href: '#privacy' },
-    { label: 'Terms', href: '#terms' },
-    { label: 'Security', href: '#security' },
+    { label: 'Privacy', href: '#privacy', external: false as const },
+    { label: 'Terms', href: '#terms', external: false as const },
+    { label: 'Security', href: '#security', external: false as const },
   ],
-};
+});
 
 const Footer = () => {
+  const desktopRelease = useDesktopDownload();
+  const desktopDownloadUrl = desktopRelease?.download_url ?? null;
+  const links = footerLinks(desktopDownloadUrl);
+
   const scrollToSection = (href: string) => {
     if (href.startsWith('#')) {
       const element = document.querySelector(href);
@@ -82,23 +91,37 @@ const Footer = () => {
           </div>
 
           {/* Links */}
-          {Object.entries(footerLinks).map(([category, links]) => (
+          {Object.entries(links).map(([category, categoryLinks]) => (
             <div key={category}>
               <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#111827' }}>
                 {category}
               </h3>
               <ul className="space-y-3">
-                {links.map((link) => (
+                {categoryLinks.map((link) => (
                   <li key={link.label}>
-                    <button
-                      onClick={() => scrollToSection(link.href)}
-                      className="text-sm transition-colors"
-                      style={{ color: '#6b7280' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
-                    >
-                      {link.label}
-                    </button>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm transition-colors"
+                        style={{ color: '#6b7280' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => scrollToSection(link.href)}
+                        className="text-sm transition-colors"
+                        style={{ color: '#6b7280' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                      >
+                        {link.label}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

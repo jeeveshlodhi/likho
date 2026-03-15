@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { Routes, Route } from "react-router";
 import Welcome from "@/pages/landing/welcome";
+import DownloadPage from "@/pages/landing/DownloadPage";
 import SignIn from "@/pages/auth/sign-in";
 import SignUp from "@/pages/auth/sign-up";
 import DashboardLayout from "@/pages/dashboard/DashboardLayout";
@@ -41,6 +42,7 @@ function App() {
   const routes = (
     <Routes>
       <Route path="/" element={<Welcome />} />
+      <Route path="/download" element={<DownloadPage />} />
       <Route path="/auth/sign-in" element={<SignIn />} />
       <Route path="/auth/sign-up" element={<SignUp />} />
       <Route path="/shared/:token" element={<SharedPageView />} />

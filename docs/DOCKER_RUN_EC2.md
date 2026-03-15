@@ -131,3 +131,25 @@ chmod +x scripts/docker-run-standalone.sh
 ```
 
 This starts db → redis → backend → frontend on `likho-network` with the correct names and env.
+
+### After `git pull` — rebuild images so the app uses new code
+
+The script **does not build** images; it only runs existing `likho-backend:latest` and `likho-frontend:latest`. After pulling new code, rebuild and restart:
+
+```bash
+cd ~/likho   # or your repo path
+
+# Rebuild images from current code
+docker build -t likho-backend:latest ./backend
+docker build -t likho-frontend:latest ./likho-app
+
+# Restart app containers (script stops db/redis too; data is in volume)
+./scripts/docker-run-standalone.sh
+```
+
+To restart only backend and frontend (keep db/redis running):
+
+```bash
+docker stop backend frontend && docker rm backend frontend
+# Then run the backend and frontend docker run commands from section 2 above.
+```

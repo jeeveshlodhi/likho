@@ -2,11 +2,14 @@ import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Download } from 'lucide-react';
+import { useDesktopDownload } from '@/hooks/useDesktopDownload';
+import { isTauri } from '@/utils/platform';
 
 const FinalCTA = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const desktopRelease = useDesktopDownload();
 
   return (
     <section
@@ -52,7 +55,7 @@ const FinalCTA = () => {
             Join thousands of thinkers who are already using Likho to bring their ideas to life.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10 flex-wrap">
             <Link
               to="/auth/sign-up"
               className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold rounded-xl transition-opacity hover:opacity-90"
@@ -61,6 +64,28 @@ const FinalCTA = () => {
               Start using Likho
               <ArrowRight className="w-4 h-4" />
             </Link>
+            {desktopRelease && !isTauri() && (
+              <a
+                href={desktopRelease.download_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold rounded-xl transition-opacity hover:opacity-90"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Download Tauro (Desktop)
+              </a>
+            )}
             <button
               onClick={() => document.querySelector('#templates')?.scrollIntoView({ behavior: 'smooth' })}
               className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold rounded-xl transition-colors"

@@ -250,23 +250,22 @@ const Hero = () => {
           >
             Get Started
           </Link>
-          {desktopRelease && (
-            <a
-              href={desktopRelease.download_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-opacity hover:opacity-90"
-              style={{
-                backgroundColor: '#ffffff',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-              }}
-            >
-              <Download className="w-4 h-4" />
-              Download for Desktop
-            </a>
-          )}
+          <a
+            href={desktopRelease?.download_url ?? '/download'}
+            {...(desktopRelease?.download_url
+              ? { target: '_blank', rel: 'noopener noreferrer' }
+              : {})}
+            className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+            }}
+          >
+            <Download className="w-4 h-4" />
+            Download Tauro (Desktop)
+          </a>
           <button
             onClick={() => document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-colors"
