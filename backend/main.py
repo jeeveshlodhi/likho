@@ -77,13 +77,16 @@ default_window = getattr(settings, "RATE_LIMIT_DEFAULT_WINDOW", 60)
 # expects the app in __init__ but FastAPI's add_middleware doesn't pass it
 # So we manually wrap the app
 
-# API Routers - these must be added BEFORE middleware wrapping
+# API Routers - these must be added BEFORE middleware wrapping.
+# Register sharing and collaboration BEFORE pages so that paths like
+# /api/v1/pages/{id}/permissions, /comments, /share-links, /my-role match
+# (otherwise /api/v1/pages can take precedence and return 404).
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users_router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(workspace_router, prefix=f"{settings.API_V1_STR}/workspaces", tags=["workspaces"])
-app.include_router(pages_router, prefix=f"{settings.API_V1_STR}/pages", tags=["pages"])
 app.include_router(sharing_router, prefix=f"{settings.API_V1_STR}", tags=["sharing"])
 app.include_router(collaboration_router, prefix=f"{settings.API_V1_STR}", tags=["collaboration"])
+app.include_router(pages_router, prefix=f"{settings.API_V1_STR}/pages", tags=["pages"])
 app.include_router(ai_router, prefix=f"{settings.API_V1_STR}/ai", tags=["ai"])
 app.include_router(temp_notes_router, prefix=f"{settings.API_V1_STR}/temp-notes", tags=["temp-notes"])
 app.include_router(remote_config_public_router, prefix=f"{settings.API_V1_STR}", tags=["remote-config"])

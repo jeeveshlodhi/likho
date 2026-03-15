@@ -15,6 +15,7 @@ interface WorkspaceState {
 
   // Folder actions
   createFolder: (name: string, spaceType: SpaceType, parentId?: string | null) => Folder;
+  addFolder: (folder: Folder) => void;
   renameFolder: (id: string, name: string) => void;
   deleteFolder: (id: string) => void;
   toggleFolderExpanded: (id: string) => void;
@@ -67,6 +68,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state) => ({ folders: [...state.folders, folder] }));
         return folder;
       },
+
+      addFolder: (folder) =>
+        set((state) => ({
+          folders: state.folders.some((f) => f.id === folder.id)
+            ? state.folders.map((f) => (f.id === folder.id ? { ...f, ...folder } : f))
+            : [...state.folders, folder],
+        })),
 
       renameFolder: (id, name) =>
         set((state) => ({

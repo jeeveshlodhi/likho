@@ -32,6 +32,7 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
     expandedSpaces,
     toggleSpaceExpanded,
     createFolder,
+    addFolder,
     createNote,
     createCanvas,
     addNote,
@@ -125,14 +126,44 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
     [spaceType, createNote, createCanvas, addNote, setActiveNote, navigate, workspace?.id, spaces, createPageMutation]
   );
 
-  const handleCreateFolder = useCallback(() => {
+  const handleCreateFolder = useCallback(async () => {
     const name = newFolderName.trim();
-    if (name) {
-      createFolder(name, spaceType);
-      setNewFolderName('');
-      setCreatingFolder(false);
+    if (!name) return;
+
+    // Online space: create folder on backend first so it gets a UUID; then notes created inside it can use parent_id
+    if (spaceType === 'online' && workspace?.id && spaces?.length && createPageMutation.mutateAsync) {
+      const onlineSpace = spaces.find((s) => s.type === 'online');
+      if (onlineSpace) {
+        try {
+          const page = await createPageMutation.mutateAsync({
+            space_id: onlineSpace.id,
+            title: name,
+            is_folder: true,
+          });
+          addFolder({
+            id: page.id,
+            name: page.title || name,
+            spaceType: 'online',
+            parentId: page.parent_id,
+            icon: page.icon ?? null,
+            sortOrder: page.sort_order ?? 0,
+            isExpanded: false,
+            createdAt: page.created_at,
+            updatedAt: page.updated_at,
+          });
+          setNewFolderName('');
+          setCreatingFolder(false);
+          return;
+        } catch {
+          // Fallback to local-only below
+        }
+      }
     }
-  }, [newFolderName, spaceType, createFolder]);
+
+    createFolder(name, spaceType);
+    setNewFolderName('');
+    setCreatingFolder(false);
+  }, [newFolderName, spaceType, createFolder, addFolder, workspace?.id, spaces, createPageMutation]);
 
   const handleDropNote = useCallback(
     (noteId: string, targetFolderId: string | null) => {

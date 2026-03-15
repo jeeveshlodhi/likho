@@ -1,6 +1,8 @@
 """
 API endpoints for workspaces, spaces, and pages.
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -20,6 +22,8 @@ from app.modules.workspaces.schemas import (
     PageListResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 workspace_router = APIRouter()
 pages_router = APIRouter()
 
@@ -32,10 +36,14 @@ def get_my_workspace(
     current_user: User = Depends(get_current_active_user),
 ):
     """Get or create the user's personal workspace."""
-    workspace = crud.get_or_create_personal_workspace(
-        db, current_user.id, current_user.full_name or current_user.email
-    )
-    return workspace
+    try:
+        workspace = crud.get_or_create_personal_workspace(
+            db, current_user.id, current_user.full_name or current_user.email
+        )
+        return workspace
+    except Exception as e:
+        logger.exception("GET /workspaces/me failed: %s", e)
+        raise
 
 
 @workspace_router.get("/{workspace_id}/spaces", response_model=list[SpaceResponse])

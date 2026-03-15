@@ -1,10 +1,11 @@
 """
 Pydantic schemas for workspaces, spaces, and pages.
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from uuid import UUID
 from datetime import datetime
 from typing import Any
+import enum
 
 
 # ── Workspace ──
@@ -19,6 +20,11 @@ class WorkspaceResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("type")
+    @staticmethod
+    def serialize_type(v: str | enum.Enum) -> str:
+        return v.value if isinstance(v, enum.Enum) else v
 
 
 # ── Space ──

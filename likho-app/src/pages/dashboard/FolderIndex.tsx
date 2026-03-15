@@ -21,6 +21,9 @@ import {
   getTemplateContent,
   getTemplateById,
 } from '@/lib/templateRegistry';
+import { useWorkspace, useSpaces, useCreatePage } from '@/hooks/useWorkspace';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function FolderIndex() {
   const { folderId } = useParams<{ folderId: string }>();
@@ -33,6 +36,11 @@ export default function FolderIndex() {
   const setActiveFolder = useWorkspaceStore((s) => s.setActiveFolder);
   const createNote = useWorkspaceStore((s) => s.createNote);
   const createCanvas = useWorkspaceStore((s) => s.createCanvas);
+  const addNote = useWorkspaceStore((s) => s.addNote);
+
+  const { data: workspace } = useWorkspace();
+  const { data: spaces } = useSpaces(workspace?.id);
+  const createPageMutation = useCreatePage();
 
   const folder = useMemo(
     () => (folderId ? folders.find((f) => f.id === folderId) : null),
@@ -75,29 +83,82 @@ export default function FolderIndex() {
   );
 
   const handleNewPageSelect = useCallback(
-    (_spaceType: SpaceType, templateId: PageType) => {
+    async (_spaceType: SpaceType, templateId: PageType) => {
       if (!folder) return;
       setActiveFolder(null);
 
+      const template = getTemplateById(templateId);
       const content = getTemplateContent(templateId);
+      const defaultTitle = template?.defaultTitle || 'Untitled';
 
-      // Handle different content types
+      // Online space + folder has server UUID → create on backend with parent_id so note saves in folder
+      const folderIsServerUuid = UUID_REGEX.test(folder.id);
+      if (
+        folder.spaceType === 'online' &&
+        folderIsServerUuid &&
+        workspace?.id &&
+        spaces?.length &&
+        createPageMutation.mutateAsync
+      ) {
+        const onlineSpace = spaces.find((s) => s.type === 'online');
+        if (onlineSpace) {
+          try {
+            const page = await createPageMutation.mutateAsync({
+              space_id: onlineSpace.id,
+              parent_id: folder.id,
+              title: defaultTitle,
+              page_type: templateId,
+              content: content.data,
+            });
+            const note = {
+              id: page.id,
+              title: page.title || defaultTitle,
+              content: page.content ?? content.data,
+              folderId: page.parent_id,
+              spaceType: 'online' as const,
+              pageType: (page.page_type as PageType) || templateId,
+              icon: page.icon ?? null,
+              coverImage: page.cover_url ?? undefined,
+              sortOrder: page.sort_order ?? 0,
+              createdAt: page.created_at,
+              updatedAt: page.updated_at,
+            };
+            addNote(note);
+            setActiveNote(note.id);
+            navigate(`/dashboard/note/${note.id}`);
+            return;
+          } catch {
+            // Fallback to local create below
+          }
+        }
+      }
+
+      // Offline or fallback: create locally
       let note;
       if (content.type === 'canvas') {
         note = createCanvas(folder.id, folder.spaceType);
-        // Update with proper canvas content if needed
         if (content.data.elements?.length > 0) {
           note.content = content.data;
         }
       } else {
-        // For all other types (note, kanban, meeting, etc.)
         note = createNote(folder.id, folder.spaceType, templateId, content.data);
       }
 
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
     },
-    [folder, createNote, createCanvas, setActiveFolder, setActiveNote, navigate]
+    [
+      folder,
+      workspace?.id,
+      spaces,
+      createPageMutation,
+      createNote,
+      createCanvas,
+      addNote,
+      setActiveFolder,
+      setActiveNote,
+      navigate,
+    ]
   );
 
   const goToFolderIndex = useCallback(

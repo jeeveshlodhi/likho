@@ -8,9 +8,10 @@ import InlineEdit from '@/components/shared/InlineEdit';
 import NoteItem from './NoteItem';
 import NewPageModal from './NewPageModal';
 import { SIDEBAR_NOTE_DRAG_TYPE } from './NoteItem';
-import {
-  getTemplateContent,
-} from '@/lib/templateRegistry';
+import { getTemplateContent, getTemplateById } from '@/lib/templateRegistry';
+import { useWorkspace, useSpaces, useCreatePage } from '@/hooks/useWorkspace';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface FolderItemProps {
   folder: FolderWithChildren;
@@ -28,9 +29,15 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     createNote,
     createCanvas,
     createFolder,
+    addFolder,
+    addNote,
     setActiveNote,
     setActiveFolder,
   } = useWorkspaceStore();
+
+  const { data: workspace } = useWorkspace();
+  const { data: spaces } = useSpaces(workspace?.id);
+  const createPageMutation = useCreatePage();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -57,28 +64,83 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
   );
 
   const handleNewPageSelect = useCallback(
-    (_spaceType: SpaceType, templateId: PageType) => {
+    async (_spaceType: SpaceType, templateId: PageType) => {
       if (!folder.isExpanded) toggleFolderExpanded(folder.id);
 
+      const template = getTemplateById(templateId);
       const content = getTemplateContent(templateId);
+      const defaultTitle = template?.defaultTitle || 'Untitled';
 
-      // Handle different content types
+      // Online space + folder has server UUID → create on backend with parent_id so note saves in folder
+      const folderIsServerUuid = UUID_REGEX.test(folder.id);
+      if (
+        folder.spaceType === 'online' &&
+        folderIsServerUuid &&
+        workspace?.id &&
+        spaces?.length &&
+        createPageMutation.mutateAsync
+      ) {
+        const onlineSpace = spaces.find((s) => s.type === 'online');
+        if (onlineSpace) {
+          try {
+            const page = await createPageMutation.mutateAsync({
+              space_id: onlineSpace.id,
+              parent_id: folder.id,
+              title: defaultTitle,
+              page_type: templateId,
+              content: content.data,
+            });
+            const note = {
+              id: page.id,
+              title: page.title || defaultTitle,
+              content: page.content ?? content.data,
+              folderId: page.parent_id,
+              spaceType: 'online' as const,
+              pageType: (page.page_type as PageType) || templateId,
+              icon: page.icon ?? null,
+              coverImage: page.cover_url ?? undefined,
+              sortOrder: page.sort_order ?? 0,
+              createdAt: page.created_at,
+              updatedAt: page.updated_at,
+            };
+            addNote(note);
+            setActiveNote(note.id);
+            navigate(`/dashboard/note/${note.id}`);
+            return;
+          } catch {
+            // Fallback to local create below
+          }
+        }
+      }
+
+      // Offline or fallback: create locally
       let note;
       if (content.type === 'canvas') {
         note = createCanvas(folder.id, folder.spaceType);
-        // Update with proper canvas content if needed
         if (content.data.elements?.length > 0) {
           note.content = content.data;
         }
       } else {
-        // For all other types (note, kanban, meeting, etc.)
         note = createNote(folder.id, folder.spaceType, templateId, content.data);
       }
 
       setActiveNote(note.id);
       navigate(`/dashboard/note/${note.id}`);
     },
-    [folder.id, folder.spaceType, folder.isExpanded, createNote, createCanvas, toggleFolderExpanded, setActiveNote, navigate]
+    [
+      folder.id,
+      folder.spaceType,
+      folder.isExpanded,
+      workspace?.id,
+      spaces,
+      createPageMutation,
+      createNote,
+      createCanvas,
+      addNote,
+      toggleFolderExpanded,
+      setActiveNote,
+      navigate,
+    ]
   );
 
   const menuItems: ContextMenuItem[] = [
@@ -90,9 +152,43 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     {
       label: 'New Subfolder',
       icon: <Folder size={14} />,
-      onClick: () => {
-        createFolder('New Folder', folder.spaceType, folder.id);
+      onClick: async () => {
         if (!folder.isExpanded) toggleFolderExpanded(folder.id);
+        const name = 'New Folder';
+        if (
+          folder.spaceType === 'online' &&
+          UUID_REGEX.test(folder.id) &&
+          workspace?.id &&
+          spaces?.length &&
+          createPageMutation.mutateAsync
+        ) {
+          const onlineSpace = spaces.find((s) => s.type === 'online');
+          if (onlineSpace) {
+            try {
+              const page = await createPageMutation.mutateAsync({
+                space_id: onlineSpace.id,
+                parent_id: folder.id,
+                title: name,
+                is_folder: true,
+              });
+              addFolder({
+                id: page.id,
+                name: page.title || name,
+                spaceType: 'online',
+                parentId: page.parent_id,
+                icon: page.icon ?? null,
+                sortOrder: page.sort_order ?? 0,
+                isExpanded: false,
+                createdAt: page.created_at,
+                updatedAt: page.updated_at,
+              });
+              return;
+            } catch {
+              // fallback to local
+            }
+          }
+        }
+        createFolder(name, folder.spaceType, folder.id);
       },
     },
     {
