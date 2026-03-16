@@ -1,0 +1,11 @@
+[env]
+# Force macOS deployment target to 10.15+ so llama.cpp's use of
+# std::filesystem (introduced in macOS 10.15) compiles correctly.
+# Without this the cc crate defaults to 10.13, causing 'path is unavailable' errors.
+MACOSX_DEPLOYMENT_TARGET = { value = "10.15", force = true }
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
