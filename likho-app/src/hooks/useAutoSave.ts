@@ -122,7 +122,7 @@ export function useAutoSave(noteId: string, onlineSpaceId?: string, delay = 500)
               space_id: onlineSpaceId,
               content: updates.content ?? currentNote.content,
               page_type: currentNote.pageType ?? 'note',
-              // Only pass parent_id if it's a real UUID — nanoid folder IDs
+              // Only pass parent_id if it's a real server UUID — nanoid folder IDs
               // have not been synced to the backend yet.
               parent_id: currentNote.folderId && UUID_REGEX.test(currentNote.folderId)
                 ? currentNote.folderId

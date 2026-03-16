@@ -156,14 +156,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           notes: state.notes.some((n) => n.id === note.id)
             ? state.notes.map((n) => {
                 if (n.id !== note.id) return n;
-                // Merge: prefer the incoming value for every field EXCEPT
-                // `content` — only overwrite content when the incoming value
-                // is explicitly provided (not undefined). List API responses
-                // don't include page content, so we must keep the local copy.
+                // Merge: prefer the incoming value for every field EXCEPT:
+                // - `content`: only overwrite when explicitly provided (not undefined).
+                //   List API responses don't include page content, so keep the local copy.
+                // - `folderId`: don't overwrite a known local folder with null from the
+                //   server. This can happen when useAutoSave creates a note on the backend
+                //   with parent_id=null (because the folder has a local nanoid ID not yet
+                //   synced). The server is then wrong; keep the local association.
                 return {
                   ...n,
                   ...note,
                   content: note.content !== undefined ? note.content : n.content,
+                  folderId: note.folderId ?? n.folderId,
                 };
               })
             : [...state.notes, note],
