@@ -1,4 +1,5 @@
-import type { ParsedLink, Note } from '@/types/workspace';
+import type { ParsedLink } from '@/types/links';
+import type { Note } from '@/types/workspace';
 
 /**
  * Parse content for wikilinks and tags

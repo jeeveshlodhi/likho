@@ -252,7 +252,7 @@ function handleGlobalError(
 function handleUnhandledRejection(event: PromiseRejectionEvent): void {
   // Call original handler if exists
   if (originalOnUnhandledRejection) {
-    originalOnUnhandledRejection(event);
+    originalOnUnhandledRejection.call(window, event);
   }
   
   const reason = event.reason;

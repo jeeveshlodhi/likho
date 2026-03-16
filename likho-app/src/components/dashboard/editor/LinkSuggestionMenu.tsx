@@ -34,12 +34,10 @@ export function LinkSuggestionMenu({
       setSelectedIndex(0);
     } else {
       // Show recent/frequently used when no query
-      const recent = [...notes.slice(-5), ...folders.slice(-3)].map(item => ({
-        id: 'id' in item ? item.id : item.id,
-        title: 'title' in item ? item.title : item.name,
-        type: 'title' in item ? 'note' as const : 'folder' as const,
-        path: '',
-      }));
+      const recent = [
+        ...notes.slice(-5).map(n => ({ id: n.id, title: n.title, type: 'note' as const, path: '' })),
+        ...folders.slice(-3).map(f => ({ id: f.id, title: f.name, type: 'folder' as const, path: '' })),
+      ];
       setSuggestions(recent);
     }
   }, [query, notes, folders, getLinkSuggestions]);

@@ -48,7 +48,7 @@ const modalVariants = {
     scale: 1,
     y: 0,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       damping: 25,
       stiffness: 300,
     },
@@ -67,7 +67,7 @@ const contentVariants = {
     opacity: 1,
     x: 0,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       damping: 30,
       stiffness: 300,
     },
@@ -86,7 +86,7 @@ const itemVariants = {
     y: 0,
     transition: {
       delay: i * 0.03,
-      type: 'spring',
+      type: 'spring' as const,
       damping: 25,
       stiffness: 300,
     },

@@ -34,7 +34,7 @@ export default function GraphView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showTags, setShowTags] = useState(true);
   const [showFolders, setShowFolders] = useState(true);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   
   const notes = useWorkspaceStore((s) => s.notes);
   const folders = useWorkspaceStore((s) => s.folders);

@@ -163,7 +163,6 @@ export default function TagManager() {
                 style={{
                   backgroundColor: `${tag.color || '#f59e0b'}20`,
                   color: tag.color || '#f59e0b',
-                  ringColor: tag.color || '#f59e0b',
                   fontSize: `${0.875 * tag.size}rem`,
                 }}
               >

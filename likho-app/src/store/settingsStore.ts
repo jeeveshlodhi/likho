@@ -557,27 +557,27 @@ export const useSettingsStore = create<SettingsStore>()(
           // Merge preferences from backend
           if (preferences.notifications) {
             set((state) => ({
-              notifications: { ...state.notifications, ...preferences.notifications },
+              notifications: { ...state.notifications, ...(preferences.notifications as Record<string, unknown>) },
             }));
           }
           if (preferences.editor) {
             set((state) => ({
-              editor: { ...state.editor, ...preferences.editor },
+              editor: { ...state.editor, ...(preferences.editor as Record<string, unknown>) },
             }));
           }
           if (preferences.appearance) {
             set((state) => ({
-              appearance: { ...state.appearance, ...preferences.appearance },
+              appearance: { ...state.appearance, ...(preferences.appearance as Record<string, unknown>) },
             }));
           }
           if (preferences.privacy) {
             set((state) => ({
-              privacy: { ...state.privacy, ...preferences.privacy },
+              privacy: { ...state.privacy, ...(preferences.privacy as Record<string, unknown>) },
             }));
           }
           if (preferences.workspace) {
             set((state) => ({
-              workspace: { ...state.workspace, ...preferences.workspace },
+              workspace: { ...state.workspace, ...(preferences.workspace as Record<string, unknown>) },
             }));
           }
 

@@ -72,8 +72,8 @@ function AskAIBlockRender({ block, editor }: { block: any; editor: any }) {
 
   const insertAndClose = () => {
     if (!localResponse) return;
-    const lines = localResponse.split("\n").filter((l) => l.trim());
-    const newBlocks = lines.map((line) => ({
+    const lines = localResponse.split("\n").filter((l: string) => l.trim());
+    const newBlocks = lines.map((line: string) => ({
       type: "paragraph" as const,
       content: [{ type: "text" as const, text: line, styles: {} }],
     }));

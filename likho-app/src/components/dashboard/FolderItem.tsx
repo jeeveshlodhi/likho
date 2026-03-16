@@ -199,7 +199,7 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     {
       label: 'Delete',
       icon: <Trash2 size={14} />,
-      destructive: true,
+      variant: 'danger' as const,
       onClick: () => deleteFolder(folder.id),
     },
   ];
@@ -271,12 +271,10 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
           <Folder size={14} className="flex-shrink-0 text-muted-foreground" />
           {isRenaming ? (
             <InlineEdit
-              initialValue={folder.name}
-              onSave={(newName) => {
-                renameFolder(folder.id, newName);
-                setIsRenaming(false);
-              }}
-              onCancel={() => setIsRenaming(false)}
+              value={folder.name}
+              editing={isRenaming}
+              onSave={(newName) => renameFolder(folder.id, newName)}
+              onEditEnd={() => setIsRenaming(false)}
               className="min-w-0 flex-1"
             />
           ) : (
@@ -320,8 +318,7 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
 
       <ContextMenu
         items={menuItems}
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
+        onClose={() => { setIsMenuOpen(false); setMenuPosition(null); }}
         position={menuPosition}
       />
 

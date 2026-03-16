@@ -178,7 +178,8 @@ export function useCollaboration({ pageId, enabled }: UseCollaborationOptions) {
       }
     };
 
-    provider.on('message', handleMessage);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (provider as any).on('message', handleMessage);
 
     // Set awareness
     provider.awareness.setLocalStateField('user', {

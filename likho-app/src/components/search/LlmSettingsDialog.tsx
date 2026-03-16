@@ -50,7 +50,7 @@ export const LlmSettingsDialog: React.FC<LlmSettingsDialogProps> = ({
   const handleLoadModel = async () => {
     const modelConfig: LlmConfig = {
       ...localConfig,
-      model_path: `models/${selectedModel}.gguf`,
+      model_file: `models/${selectedModel}.gguf`,
     };
     await loadModel(modelConfig);
   };

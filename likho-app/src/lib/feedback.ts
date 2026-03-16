@@ -93,7 +93,8 @@ export async function captureScreenshot(): Promise<string | null> {
     
     // Use Tauri's screenshot API
     // Note: This requires the `screenshot` permission in tauri.conf.json
-    const response = await window.capture();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (window as any).capture();
     
     // Convert to base64 for transmission
     // The response is a PNG in bytes, we need to convert it
@@ -135,7 +136,7 @@ async function storeFeedbackLocally(data: unknown): Promise<void> {
   const store = await Store.load("pending-feedback.json");
   const pending = (await store.get<unknown[]>("feedback")) || [];
   pending.push({
-    ...data,
+    ...(data as Record<string, unknown>),
     stored_at: new Date().toISOString(),
   });
   await store.set("feedback", pending);

@@ -8,7 +8,8 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useLinkStore } from '@/store/linkStore';
 import { parseContentForLinks, buildWikilink } from '@/lib/linkParser';
 import { LinkSearchEngine } from '@/lib/linkSearchEngine';
-import type { NoteLink, Tag, LinkGraph, Note } from '@/types/links';
+import type { NoteLink, Tag, LinkGraph } from '@/types/links';
+import type { Note } from '@/types/workspace';
 
 export interface LinkAPI {
   // Link Management
