@@ -78,6 +78,10 @@ jobs:
         if: startsWith(matrix.platform, 'macos')
         run: brew install cmake
 
+      - name: Set macOS deployment target
+        if: startsWith(matrix.platform, 'macos')
+        run: echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+
       - name: Install frontend dependencies
         working-directory: likho-app
         run: bun install
