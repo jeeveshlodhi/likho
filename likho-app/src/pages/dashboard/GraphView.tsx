@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   Share2, 
@@ -29,8 +29,15 @@ export default function GraphView() {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
+  // Node-drag state — Obsidian-style: the dragged node is pinned to the mouse;
+  // connected nodes are pulled elastically by the existing spring forces.
+  const draggingNodeIdRef = useRef<string | null>(null);
+  // Mouse position in graph-coordinate space (updated every mousemove while dragging).
+  const dragGraphPosRef = useRef({ x: 0, y: 0 });
+  // Track last-click time & node to distinguish single vs double click.
+  const lastClickTimeRef = useRef(0);
+  const lastClickNodeRef = useRef<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTags, setShowTags] = useState(true);
   const [showFolders, setShowFolders] = useState(true);
@@ -38,16 +45,20 @@ export default function GraphView() {
   
   const notes = useWorkspaceStore((s) => s.notes);
   const folders = useWorkspaceStore((s) => s.folders);
+  // Subscribe to the raw link/tag data so the graph re-computes whenever
+  // scanNoteForLinks updates the store (generateGraph's function ref is stable).
+  const links = useLinkStore((s) => s.links);
+  const tags = useLinkStore((s) => s.tags);
+  const tagUsages = useLinkStore((s) => s.tagUsages);
   const generateGraph = useLinkStore((s) => s.generateGraph);
-  
+
   const { graph, nodes, edges } = useMemo(() => {
     const g = generateGraph(notes, folders);
-    
-    // Initialize node positions randomly
+
     const nodeMap = new Map<string, GraphNode>();
     const centerX = (containerRef.current?.clientWidth || 800) / 2;
     const centerY = (containerRef.current?.clientHeight || 600) / 2;
-    
+
     g.nodes.forEach((node, i) => {
       const angle = (i / g.nodes.length) * Math.PI * 2;
       const radius = 200;
@@ -60,9 +71,11 @@ export default function GraphView() {
         radius: node.type === 'note' ? 8 : node.type === 'tag' ? 6 : 10,
       });
     });
-    
+
     return { graph: g, nodes: nodeMap, edges: g.edges };
-  }, [notes, folders, generateGraph]);
+  // links / tags / tagUsages are the reactive triggers for graph changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, folders, links, tags, tagUsages]);
   
   // Filter nodes based on search and settings
   const visibleNodes = useMemo(() => {
@@ -152,13 +165,23 @@ export default function GraphView() {
         node.vy += dy * 0.001;
       });
       
-      // Update positions with damping
+      // Update positions with damping.
+      // If a node is being dragged, pin it to the mouse — the spring forces
+      // on its neighbours will pull them along naturally (Obsidian-style physics).
       nodeArray.forEach(node => {
-        node.vx *= 0.9;
-        node.vy *= 0.9;
-        node.x += node.vx;
-        node.y += node.vy;
-        
+        if (draggingNodeIdRef.current && node.id === draggingNodeIdRef.current) {
+          // Pin dragged node exactly to the mouse; zero velocity so it doesn't drift.
+          node.x = dragGraphPosRef.current.x;
+          node.y = dragGraphPosRef.current.y;
+          node.vx = 0;
+          node.vy = 0;
+        } else {
+          node.vx *= 0.9;
+          node.vy *= 0.9;
+          node.x += node.vx;
+          node.y += node.vy;
+        }
+
         // Keep in bounds
         node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
         node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
@@ -194,8 +217,8 @@ export default function GraphView() {
         ctx.fillStyle = node.color || (node.type === 'note' ? '#3b82f6' : node.type === 'tag' ? '#f59e0b' : '#8b5cf6');
         ctx.fill();
         
-        // Highlight hovered node
-        if (hoveredNode?.id === node.id) {
+        // Highlight hovered node or the node being dragged
+        if (hoveredNode?.id === node.id || draggingNodeIdRef.current === node.id) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
           ctx.strokeStyle = '#fff';
@@ -224,46 +247,81 @@ export default function GraphView() {
     };
   }, [nodes, edges, visibleNodes, scale, offset, hoveredNode]);
   
-  // Handle mouse interactions
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setOffset({
-        x: offset.x + e.movementX,
-        y: offset.y + e.movementY,
-      });
-      return;
-    }
-    
+  /** Convert a viewport mouse event to graph-space coordinates. */
+  const toGraphCoords = useCallback((e: React.MouseEvent) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - offset.x) / scale;
-    const y = (e.clientY - rect.top - offset.y) / scale;
-    
-    // Find hovered node
-    let found = null;
+    return {
+      x: (e.clientX - rect.left - offset.x) / scale,
+      y: (e.clientY - rect.top - offset.y) / scale,
+    };
+  }, [offset, scale]);
+
+  /** Find the topmost visible node under graph-space point (x, y). */
+  const nodeAtPoint = useCallback((x: number, y: number): GraphNode | null => {
+    let found: GraphNode | null = null;
     visibleNodes.forEach(node => {
       const dx = x - node.x;
       const dy = y - node.y;
-      if (Math.sqrt(dx * dx + dy * dy) < node.radius + 5) {
-        found = node;
-      }
+      if (Math.sqrt(dx * dx + dy * dy) < node.radius + 5) found = node;
     });
-    setHoveredNode(found);
+    return found;
+  }, [visibleNodes]);
+
+  /** Navigate to a node's destination. */
+  const openNode = useCallback((node: GraphNode) => {
+    if (node.type === 'note') navigate(`/dashboard/note/${node.id}`);
+    else if (node.type === 'folder') navigate(`/dashboard/folder/${node.id}`);
+    else navigate('/dashboard/graph');   // tag nodes → stay on graph (no separate tag page)
+  }, [navigate]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const gp = toGraphCoords(e);
+    const clicked = nodeAtPoint(gp.x, gp.y);
+
+    if (clicked) {
+      // Pin this node to the mouse; physics will pull its neighbours.
+      draggingNodeIdRef.current = clicked.id;
+      dragGraphPosRef.current = gp;
+    } else {
+      setIsDragging(true);
+    }
   };
-  
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (draggingNodeIdRef.current) {
+      // Update the graph-space mouse position — the animation loop pins the
+      // dragged node here every frame, letting spring forces pull neighbours.
+      dragGraphPosRef.current = toGraphCoords(e);
+      return;
+    }
+
+    if (isDragging) {
+      setOffset(prev => ({ x: prev.x + e.movementX, y: prev.y + e.movementY }));
+      return;
+    }
+
+    // Update hover highlight.
+    const gp = toGraphCoords(e);
+    setHoveredNode(nodeAtPoint(gp.x, gp.y));
+  };
+
+  const handleMouseUp = () => {
+    draggingNodeIdRef.current = null;
+    setIsDragging(false);
+  };
+
+  /** Double-click opens the node; single click just highlights. */
   const handleClick = () => {
     if (!hoveredNode) return;
-    
-    if (hoveredNode.type === 'note') {
-      navigate(`/dashboard/note/${hoveredNode.id}`);
-    } else if (hoveredNode.type === 'folder') {
-      navigate(`/dashboard/folder/${hoveredNode.id}`);
-    } else if (hoveredNode.type === 'tag') {
-      const tagId = hoveredNode.id.replace('tag:', '');
-      navigate(`/dashboard/tag-manager`);
-    }
+    const now = Date.now();
+    const isDouble =
+      now - lastClickTimeRef.current < 400 &&
+      lastClickNodeRef.current === hoveredNode.id;
+    lastClickTimeRef.current = now;
+    lastClickNodeRef.current = hoveredNode.id;
+    if (isDouble) openNode(hoveredNode);
   };
   
   const handleWheel = (e: React.WheelEvent) => {
@@ -351,12 +409,12 @@ export default function GraphView() {
       </div>
       
       {/* Canvas */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing"
-        onMouseDown={() => setIsDragging(true)}
-        onMouseUp={() => setIsDragging(false)}
-        onMouseLeave={() => setIsDragging(false)}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onMouseMove={handleMouseMove}
         onClick={handleClick}
         onWheel={handleWheel}
@@ -374,7 +432,7 @@ export default function GraphView() {
           >
             <div className="font-medium">{hoveredNode.label}</div>
             <div className="text-sm text-muted-foreground capitalize">{hoveredNode.type}</div>
-            <div className="text-xs text-muted-foreground mt-1">Click to open</div>
+            <div className="text-xs text-muted-foreground mt-1">Double-click to open · Drag to move with connections</div>
           </div>
         )}
       </div>

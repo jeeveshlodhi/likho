@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
-import { ChevronRight, Folder, Pencil, Trash2, MoreHorizontal, Plus } from 'lucide-react';
+import { ChevronRight, Folder, Pencil, Trash2, MoreHorizontal, Plus, Cloud, HardDrive } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { FolderWithChildren, PageType, SpaceType } from '@/types/workspace';
+import type { Folder as FolderType } from '@/types/workspace';
 import ContextMenu, { type ContextMenuItem } from '@/components/shared/ContextMenu';
 import InlineEdit from '@/components/shared/InlineEdit';
 import NoteItem from './NoteItem';
 import NewPageModal from './NewPageModal';
-import { SIDEBAR_NOTE_DRAG_TYPE } from './NoteItem';
+import { SIDEBAR_NOTE_DRAG_TYPE, SIDEBAR_NOTE_ONLINE_TYPE, SIDEBAR_NOTE_OFFLINE_TYPE } from './NoteItem';
 import { getTemplateContent, getTemplateById } from '@/lib/templateRegistry';
 import { useWorkspace, useSpaces, useCreatePage } from '@/hooks/useWorkspace';
+import TransferConfirmDialog from '@/components/transfer/TransferConfirmDialog';
+import { countFolderItems } from '@/lib/spaceTransferService';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -17,9 +20,19 @@ interface FolderItemProps {
   folder: FolderWithChildren;
   depth?: number;
   onDropNote?: (noteId: string, targetFolderId: string) => void;
+  /** Called when the user confirms moving this folder to the other space. */
+  onMoveToSpace?: (folder: FolderType) => void;
+  /** Passed down so NoteItem descendants can trigger note space moves. */
+  onNoteMoveToSpace?: (note: import('@/types/workspace').Note) => void;
 }
 
-export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItemProps) {
+export default function FolderItem({
+  folder,
+  depth = 0,
+  onDropNote,
+  onMoveToSpace,
+  onNoteMoveToSpace,
+}: FolderItemProps) {
   const navigate = useNavigate();
   const {
     activeFolderId,
@@ -43,6 +56,7 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newPageModalOpen, setNewPageModalOpen] = useState(false);
+  const [confirmTransferOpen, setConfirmTransferOpen] = useState(false);
 
   const isActive = activeFolderId === folder.id;
   const isExpanded = folder.isExpanded;
@@ -196,6 +210,20 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
       icon: <Pencil size={14} />,
       onClick: () => setIsRenaming(true),
     },
+    ...(onMoveToSpace
+      ? [
+          {
+            label: folder.spaceType === 'online' ? 'Move to Offline' : 'Move to Online',
+            icon:
+              folder.spaceType === 'online' ? (
+                <HardDrive size={14} />
+              ) : (
+                <Cloud size={14} />
+              ),
+            onClick: () => setConfirmTransferOpen(true),
+          },
+        ]
+      : []),
     {
       label: 'Delete',
       icon: <Trash2 size={14} />,
@@ -213,20 +241,42 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
     [folder.id, setActiveFolder, navigate]
   );
 
-  // Drag and drop handlers
+  // ── Drag and drop handlers ─────────────────────────────────────────────────
   const [isDragOver, setIsDragOver] = useState(false);
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setIsDragOver(true);
-  }, []);
+  const [isCrossSpaceDragOver, setIsCrossSpaceDragOver] = useState(false);
+
+  // Determine which "other space" marker to look for
+  const crossSpaceType =
+    folder.spaceType === 'online' ? SIDEBAR_NOTE_OFFLINE_TYPE : SIDEBAR_NOTE_ONLINE_TYPE;
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      if (e.dataTransfer.types.includes(crossSpaceType)) {
+        setIsCrossSpaceDragOver(true);
+        setIsDragOver(false);
+      } else {
+        setIsDragOver(true);
+        setIsCrossSpaceDragOver(false);
+      }
+    },
+    [crossSpaceType]
+  );
+
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+      setIsCrossSpaceDragOver(false);
+    }
   }, []);
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       setIsDragOver(false);
+      setIsCrossSpaceDragOver(false);
       if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
       e.preventDefault();
       try {
@@ -234,29 +284,51 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
           noteId: string;
           spaceType: string;
         };
-        if (payload.spaceType !== folder.spaceType) return;
-        onDropNote?.(payload.noteId, folder.id);
+
+        if (payload.spaceType === folder.spaceType) {
+          // Same-space move: reorder within the tree
+          onDropNote?.(payload.noteId, folder.id);
+        } else if (onNoteMoveToSpace) {
+          // Cross-space drop: find the note and trigger a space transfer
+          const note = useWorkspaceStore
+            .getState()
+            .notes.find((n) => n.id === payload.noteId);
+          if (note) onNoteMoveToSpace(note);
+        }
       } catch {
-        // ignore
+        // ignore malformed payload
       }
     },
-    [folder.id, folder.spaceType, onDropNote]
+    [folder.id, folder.spaceType, onDropNote, onNoteMoveToSpace]
   );
 
   return (
-    <div
+    <div 
+      className="relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      data-folder-drop-zone={folder.id}
     >
+      {/* Drag overlay - prevents child elements from intercepting drops */}
+      {(isDragOver || isCrossSpaceDragOver) && (
+        <div 
+          className="absolute inset-0 z-50 bg-transparent" 
+          style={{ pointerEvents: 'all' }}
+        />
+      )}
+      
+      {/* Folder Header */}
       <div
         onContextMenu={handleContextMenu}
         className={`group mb-0.5 flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
-          isDragOver
-            ? 'bg-primary/10 text-primary'
-            : isActive
-              ? 'bg-accent text-accent-foreground'
-              : 'hover:bg-accent'
+          isCrossSpaceDragOver
+            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+            : isDragOver
+              ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+              : isActive
+                ? 'bg-accent text-accent-foreground'
+                : 'hover:bg-accent'
         }`}
         style={{ paddingLeft }}
       >
@@ -322,6 +394,19 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
         position={menuPosition}
       />
 
+      {/* Folder transfer confirmation dialog */}
+      {onMoveToSpace && (
+        <TransferConfirmDialog
+          open={confirmTransferOpen}
+          onClose={() => setConfirmTransferOpen(false)}
+          onConfirm={() => onMoveToSpace(folder)}
+          itemName={folder.name}
+          itemCount={countFolderItems(folder.id)}
+          fromSpace={folder.spaceType}
+          toSpace={folder.spaceType === 'online' ? 'offline' : 'online'}
+        />
+      )}
+
       {isExpanded && (
         <div className="mb-0.5">
           {folder.children.map((child) => (
@@ -330,11 +415,13 @@ export default function FolderItem({ folder, depth = 0, onDropNote }: FolderItem
               folder={child}
               depth={depth + 1}
               onDropNote={onDropNote}
+              onMoveToSpace={onMoveToSpace}
+              onNoteMoveToSpace={onNoteMoveToSpace}
             />
           ))}
           {folder.notes.map((note) => (
             <div key={note.id} style={{ paddingLeft: paddingLeft + 16 }}>
-              <NoteItem note={note} />
+              <NoteItem note={note} onMoveToSpace={onNoteMoveToSpace} />
             </div>
           ))}
         </div>

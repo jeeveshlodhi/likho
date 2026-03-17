@@ -249,15 +249,31 @@ class RemoteConfigResponse(RemoteConfigBase):
     model_config = {"from_attributes": True}
 
 
-class AppVersionResponse(AppVersionBase):
-    """Schema for app version responses. Serializes update_url as download_url for admin dashboard."""
+class AppVersionResponse(BaseModel):
+    """Schema for app version responses.
+
+    Maps the DB column ``update_url`` → ``download_url`` in the JSON response
+    so the admin dashboard and Tauri updater always receive ``download_url``.
+    """
     id: UUID
+    platform: str
+    version: str
+    build_number: Optional[int] = None
+    is_latest: bool = False
+    min_required_version: str
+    force_update: bool = False
+    # ``alias="update_url"`` → Pydantic reads obj.update_url (ORM / dict key
+    # "update_url") but the serialised JSON key is the field name "download_url".
+    download_url: Optional[str] = Field(None, alias="update_url")
+    release_notes: Optional[str] = None
+    release_summary: Optional[str] = None
+    file_size: Optional[int] = None
+    file_hash: Optional[str] = None
+    released_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    # Expose update_url as download_url in JSON for admin dashboard
-    update_url: Optional[str] = Field(None, serialization_alias="download_url")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

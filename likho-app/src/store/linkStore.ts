@@ -60,20 +60,24 @@ export const useLinkStore = create<LinkState>()(
       scanNoteForLinks: (note, allNotes, allFolders) => {
         const { links, tags, tagUsages } = get();
         const now = new Date().toISOString();
-        
-        // Remove existing links for this note
+
+        // Remove existing links / tag-usages for this note
         const filteredLinks = links.filter(l => l.sourceNoteId !== note.id);
         const filteredTagUsages = tagUsages.filter(t => t.noteId !== note.id);
-        
-        // Parse content for links
+
+        // Work on a *copy* of tags so Zustand detects the reference change
+        const updatedTags: Tag[] = tags.map(t => ({ ...t }));
+
         const parsedLinks = parseContentForLinks(note);
         const newLinks: NoteLink[] = [];
         const newTagUsages: TagUsage[] = [];
-        
+
         parsedLinks.forEach(parsed => {
           if (parsed.type === 'tag') {
-            // Handle tag
-            let tag = tags.find(t => t.name.toLowerCase() === parsed.target.toLowerCase());
+            // Find existing tag (case-insensitive) or create a new one
+            let tag = updatedTags.find(
+              t => t.name.toLowerCase() === parsed.target.toLowerCase()
+            );
             if (!tag) {
               tag = {
                 id: nanoid(),
@@ -82,9 +86,9 @@ export const useLinkStore = create<LinkState>()(
                 createdAt: now,
                 updatedAt: now,
               };
-              tags.push(tag);
+              updatedTags.push(tag);
             }
-            
+
             newTagUsages.push({
               id: nanoid(),
               tagId: tag.id,
@@ -92,31 +96,23 @@ export const useLinkStore = create<LinkState>()(
               line: parsed.line,
               createdAt: now,
             });
-            
-            tag.usageCount++;
-            tag.updatedAt = now;
           } else {
-            // Handle wikilink
+            // Resolve wikilink target
             let targetNoteId: string | null = null;
             let targetFolderId: string | null = null;
-            
-            // Try to find by exact title match
-            const targetNote = allNotes.find(n => 
-              n.title.toLowerCase() === parsed.target.toLowerCase()
+
+            const targetNote = allNotes.find(
+              n => n.title.toLowerCase() === parsed.target.toLowerCase()
             );
-            
             if (targetNote) {
               targetNoteId = targetNote.id;
             } else {
-              // Try to find by folder name
-              const targetFolder = allFolders.find(f =>
-                f.name.toLowerCase() === parsed.target.toLowerCase()
+              const targetFolder = allFolders.find(
+                f => f.name.toLowerCase() === parsed.target.toLowerCase()
               );
-              if (targetFolder) {
-                targetFolderId = targetFolder.id;
-              }
+              if (targetFolder) targetFolderId = targetFolder.id;
             }
-            
+
             newLinks.push({
               id: nanoid(),
               sourceNoteId: note.id,
@@ -131,11 +127,20 @@ export const useLinkStore = create<LinkState>()(
             });
           }
         });
-        
+
+        // Recalculate usageCount from scratch based on the full resulting tagUsages
+        // (filtered old usages for this note + newly found usages).  This makes
+        // every scan idempotent — no accumulation across multiple rescans.
+        const allTagUsages = [...filteredTagUsages, ...newTagUsages];
+        updatedTags.forEach(tag => {
+          tag.usageCount = allTagUsages.filter(u => u.tagId === tag.id).length;
+          tag.updatedAt = now;
+        });
+
         set({
           links: [...filteredLinks, ...newLinks],
-          tags,
-          tagUsages: [...filteredTagUsages, ...newTagUsages],
+          tags: updatedTags,          // new array reference → Zustand triggers re-renders
+          tagUsages: allTagUsages,
         });
       },
 

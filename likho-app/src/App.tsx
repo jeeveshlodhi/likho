@@ -11,17 +11,11 @@ import FolderIndex from "@/pages/dashboard/FolderIndex";
 import PageEditor from "@/pages/dashboard/PageEditor";
 import SettingsPage from "@/pages/settings";
 import SharedPageView from "@/pages/SharedPageView";
-import LinkManager from "@/pages/dashboard/LinkManager";
-import TagManager from "@/pages/dashboard/TagManager";
 import GraphView from "@/pages/dashboard/GraphView";
-import TagView from "@/pages/dashboard/TagView";
 import TempNotesDashboard from "@/pages/dashboard/TempNotesDashboard";
-import { WorkspaceHealth } from "@/pages/dashboard/WorkspaceHealth";
 import { WorkspaceRagChat } from "@/pages/dashboard/WorkspaceRagChat";
 import { AiChat } from "@/pages/dashboard/AiChat";
-import { WorkspaceDigest } from "@/pages/dashboard/WorkspaceDigest";
 import SharedWithMe from "@/pages/dashboard/SharedWithMe";
-import { AutoGroupNotes } from "@/pages/dashboard/AutoGroupNotes";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
 import { isTauri } from "@/utils/platform";
@@ -56,17 +50,11 @@ function App() {
         <Route path="note/:noteId" element={<PageEditor />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:section" element={<SettingsPage />} />
-        <Route path="links" element={<LinkManager />} />
-        <Route path="tags" element={<TagManager />} />
-        <Route path="tag/:tagName" element={<TagView />} />
         <Route path="graph" element={<GraphView />} />
         <Route path="temp-notes" element={<TempNotesDashboard />} />
-        <Route path="workspace-health" element={<WorkspaceHealth />} />
         <Route path="ai-chat" element={<AiChat />} />
         <Route path="ai-chat-rag" element={<WorkspaceRagChat />} />
-        <Route path="digest" element={<WorkspaceDigest />} />
         <Route path="shared-with-me" element={<SharedWithMe />} />
-        <Route path="auto-group" element={<AutoGroupNotes />} />
       </Route>
     </Routes>
   );

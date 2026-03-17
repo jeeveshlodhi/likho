@@ -73,11 +73,16 @@ export interface ErrorLog {
 export interface AppVersion {
   id: string;
   version: string;
-  platform: 'ios' | 'android' | 'desktop' | 'web' | 'all';
+  platform: 'ios' | 'android' | 'desktop' | 'web' | 'all' | 'macos' | 'windows' | 'linux';
   release_notes?: string;
+  release_summary?: string;
   force_update: boolean;
-  min_required_version?: string;
+  min_required_version: string;
   download_url?: string;
+  is_latest: boolean;
+  build_number?: number;
+  file_size?: number;
+  file_hash?: string;
   released_at?: string;
   created_at: string;
   updated_at: string;

@@ -14,17 +14,19 @@ Admin endpoints (require admin authentication):
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import OAuth2PasswordBearer
+import jwt as jwt_lib
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import get_current_active_user
+from app.core.security import ALGORITHM
 from app.modules.users.models import User
 
 from . import crud, service
 from . import s3_releases as s3_releases_mod
+from .models import AppVersion as AppVersionModel
 from .schemas import (
     # Responses
     FeatureFlagResponse,
@@ -56,27 +58,65 @@ admin_router = APIRouter(tags=["remote-config-admin"])
 # Helper Functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
-    """Dependency to require admin privileges."""
-    # TODO: Implement proper admin role checking
-    # For now, we'll check if the user has a specific email domain or plan
-    # This should be replaced with proper RBAC
-    admin_plans = ["enterprise", "team"]
-    admin_emails = ["admin@", "jeevesh@"]  # Add admin email patterns
-    
-    is_admin = (
-        current_user.plan.value in admin_plans
-        or any(current_user.email.startswith(pattern) for pattern in admin_emails)
-    )
-    
-    # Also check if user has admin in their email for development
-    if not is_admin and "admin" not in current_user.email.lower():
+def require_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Dependency to require admin privileges.
+
+    Supports two auth methods (checked in order):
+    1. X-Admin-API-Key header — matches settings.ADMIN_API_KEY
+    2. Bearer JWT token — must belong to a user with admin plan/email
+    """
+    # --- API key auth (for admin dashboard) ---
+    api_key = request.headers.get("x-admin-api-key")
+    if api_key:
+        if settings.ADMIN_API_KEY and api_key == settings.ADMIN_API_KEY:
+            return None  # Authorized; no user object needed
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin API key",
         )
-    
-    return current_user
+
+    # --- Bearer JWT auth ---
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin authentication required. Provide X-Admin-API-Key header or Bearer token.",
+        )
+
+    token = auth_header.split(" ", 1)[1]
+    try:
+        payload = jwt_lib.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: Optional[str] = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except jwt_lib.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt_lib.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()  # noqa: E712
+    if not user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not found or inactive")
+
+    admin_plans = {"enterprise", "team"}
+    admin_email_prefixes = {"admin@", "jeevesh@"}
+    is_admin = (
+        user.plan.value in admin_plans
+        or any(user.email.startswith(p) for p in admin_email_prefixes)
+        or "admin" in user.email.lower()
+    )
+    if not is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+
+    return user
+
+
+def _user_id(user: Optional[User]) -> Optional[UUID]:
+    """Return user.id or None (when authenticated via API key)."""
+    return user.id if user else None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -92,41 +132,37 @@ def get_device_config(
 ):
     """
     Get all configuration for a device.
-    
+
     This endpoint returns:
     - All config values (with platform/version overrides applied)
     - All feature flags (with A/B testing applied if device_id provided)
-    
+
     No authentication required - called on app startup.
     """
-    # Get effective config values
     configs = service.get_effective_config(db, version, platform)
-    
-    # Get all feature flags
+
     feature_statuses = service.get_all_feature_statuses(
         db=db,
         version=version,
         platform=platform,
         device_id=device_id,
     )
-    
-    # Extract just the enabled status for simple feature checks
+
     features = {
-        key: status["enabled"] 
-        for key, status in feature_statuses.items()
+        key: status_val["enabled"]
+        for key, status_val in feature_statuses.items()
     }
-    
-    # Convert to FeatureCheckResponse objects
+
     feature_details = {
         key: FeatureCheckResponse(
             feature_key=key,
-            enabled=status["enabled"],
-            rollout_percentage=status["rollout_percentage"],
-            reason=status.get("reason"),
+            enabled=status_val["enabled"],
+            rollout_percentage=status_val["rollout_percentage"],
+            reason=status_val.get("reason"),
         )
-        for key, status in feature_statuses.items()
+        for key, status_val in feature_statuses.items()
     }
-    
+
     return DeviceConfigResponse(
         configs=configs,
         features=features,
@@ -135,22 +171,16 @@ def get_device_config(
 
 
 @public_router.get("/config/features", response_model=dict[str, FeatureCheckResponse])
-def get_feature_flags(
+def get_feature_flags_public(
     version: str = Query(..., description="App version (e.g., 1.2.3)"),
     platform: str = Query(..., description="Platform (windows, macos, linux)"),
     device_id: Optional[str] = Query(None, description="Unique device ID for A/B testing"),
     feature_key: Optional[str] = Query(None, description="Check specific feature only"),
     db: Session = Depends(get_db),
 ):
-    """
-    Get feature flags for a device.
-    
-    Returns all feature flags with their enabled status for the given
-    version, platform, and device. Supports A/B testing via rollout percentages.
-    """
+    """Get feature flags for a device."""
     if feature_key:
-        # Check specific feature
-        status = service.is_feature_enabled(
+        status_val = service.is_feature_enabled(
             db=db,
             feature_key=feature_key,
             version=version,
@@ -160,28 +190,27 @@ def get_feature_flags(
         return {
             feature_key: FeatureCheckResponse(
                 feature_key=feature_key,
-                enabled=status["enabled"],
-                rollout_percentage=status["rollout_percentage"],
-                reason=status.get("reason"),
+                enabled=status_val["enabled"],
+                rollout_percentage=status_val["rollout_percentage"],
+                reason=status_val.get("reason"),
             )
         }
-    
-    # Get all features
+
     statuses = service.get_all_feature_statuses(
         db=db,
         version=version,
         platform=platform,
         device_id=device_id,
     )
-    
+
     return {
         key: FeatureCheckResponse(
             feature_key=key,
-            enabled=status["enabled"],
-            rollout_percentage=status["rollout_percentage"],
-            reason=status.get("reason"),
+            enabled=status_val["enabled"],
+            rollout_percentage=status_val["rollout_percentage"],
+            reason=status_val.get("reason"),
         )
-        for key, status in statuses.items()
+        for key, status_val in statuses.items()
     }
 
 
@@ -191,14 +220,7 @@ def get_version_info(
     platform: str = Query(..., description="Platform (windows, macos, linux)"),
     db: Session = Depends(get_db),
 ):
-    """
-    Get version information for update checking.
-    
-    Returns:
-    - Whether an update is available
-    - Whether the update is required (force update)
-    - Download URL and release notes
-    """
+    """Get version information for update checking."""
     result = service.check_version_requirements(db, version, platform)
     return VersionInfoResponse(**result)
 
@@ -207,12 +229,7 @@ def get_version_info(
 def check_maintenance_mode(
     db: Session = Depends(get_db),
 ):
-    """
-    Check if maintenance mode is enabled.
-    
-    Called by the app to check if the backend is under maintenance.
-    If maintenance mode is on, the app should show a maintenance screen.
-    """
+    """Check if maintenance mode is enabled."""
     return service.is_maintenance_mode(db)
 
 
@@ -220,12 +237,7 @@ def check_maintenance_mode(
 def get_latest_desktop_release(
     db: Session = Depends(get_db),
 ):
-    """
-    Get the latest desktop app download URL for the homepage Download button.
-    No auth required. Returns version and download_url (e.g. S3 or CloudFront).
-    Use a version with platform=all and update_url set to your Tauri build URL.
-    """
-    # Prefer "all" so one desktop entry works for all OSes; else fall back to any desktop-like platform
+    """Get the latest desktop app download URL for the homepage Download button."""
     for platform in ("all", "macos", "windows", "linux"):
         version = crud.get_latest_app_version(db, platform)
         if version and version.update_url:
@@ -240,14 +252,55 @@ def get_latest_desktop_release(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Admin Endpoints - Releases (S3 presigned upload)
+# Admin Endpoints - Dashboard Stats
 # ═══════════════════════════════════════════════════════════════════════════════
 
+@admin_router.get("/admin/stats")
+def get_admin_stats(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin),
+):
+    """Get basic admin dashboard stats."""
+    from app.modules.users.models import User as UserModel
+
+    total_users = db.query(func.count(UserModel.id)).scalar() or 0
+    total_versions = db.query(func.count(AppVersionModel.id)).scalar() or 0
+
+    return {
+        "total_users": total_users,
+        "active_today": 0,  # requires last_seen_at tracking
+        "feedback_count": 0,
+        "error_count_24h": 0,
+        "total_versions": total_versions,
+    }
+
+
+@admin_router.get("/admin/versions/distribution")
+def get_version_distribution(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin),
+):
+    """Get version distribution stats (placeholder)."""
+    versions = crud.get_app_versions(db, limit=20)
+    return [
+        {
+            "version": v.version,
+            "platform": v.platform.value if hasattr(v.platform, "value") else v.platform,
+            "count": 0,
+            "percentage": 0.0,
+        }
+        for v in versions
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Admin Endpoints - Releases (S3 presigned upload)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 @admin_router.get("/admin/releases/presigned-upload")
 def get_presigned_upload_url(
     filename: str = Query(..., min_length=1, description="Release file name (e.g. likho-0.1.0.dmg)"),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """
     Get a presigned S3 URL to upload a release artifact.
@@ -266,6 +319,19 @@ def get_presigned_upload_url(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@admin_router.get("/admin/releases/s3-status")
+def get_s3_status(
+    current_user: Optional[User] = Depends(require_admin),
+):
+    """Check S3 configuration status."""
+    return {
+        "configured": settings.s3_releases_configured,
+        "bucket": settings.AWS_RELEASES_BUCKET or None,
+        "region": settings.AWS_REGION,
+        "prefix": settings.AWS_RELEASES_PREFIX,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Admin Endpoints - Feature Flags
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -277,7 +343,7 @@ def list_feature_flags(
     enabled_only: bool = False,
     platform: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """List all feature flags (admin only)."""
     flags = crud.get_feature_flags(
@@ -294,7 +360,7 @@ def list_feature_flags(
 def get_feature_flag(
     flag_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Get a specific feature flag by ID (admin only)."""
     flag = crud.get_feature_flag(db, flag_id)
@@ -307,14 +373,14 @@ def get_feature_flag(
 def create_feature_flag(
     data: FeatureFlagCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Create a new feature flag (admin only)."""
     try:
         flag = crud.create_feature_flag(
             db,
             flag_data=data.model_dump(),
-            changed_by=current_user.id,
+            changed_by=_user_id(current_user),
         )
         return flag
     except ValueError as e:
@@ -326,22 +392,22 @@ def update_feature_flag(
     flag_id: UUID,
     data: FeatureFlagUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Update a feature flag (admin only)."""
     flag = crud.get_feature_flag(db, flag_id)
     if not flag:
         raise HTTPException(status_code=404, detail="Feature flag not found")
-    
+
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     flag = crud.update_feature_flag(
         db,
         flag=flag,
         update_data=update_data,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
     )
     return flag
 
@@ -351,23 +417,19 @@ def toggle_feature_flag(
     flag_id: UUID,
     data: FeatureToggleRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
-    """
-    Toggle a feature flag on/off (admin only).
-    
-    This is a convenience endpoint for quick enable/disable operations.
-    """
+    """Toggle a feature flag on/off (admin only)."""
     flag = crud.get_feature_flag(db, flag_id)
     if not flag:
         raise HTTPException(status_code=404, detail="Feature flag not found")
-    
+
     flag = crud.toggle_feature_flag(
         db,
         flag=flag,
         enabled=data.enabled,
         rollout_percentage=data.rollout_percentage,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
         reason=data.reason,
     )
     return flag
@@ -378,17 +440,17 @@ def delete_feature_flag(
     flag_id: UUID,
     reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Soft delete a feature flag (admin only)."""
     flag = crud.get_feature_flag(db, flag_id)
     if not flag:
         raise HTTPException(status_code=404, detail="Feature flag not found")
-    
+
     crud.delete_feature_flag(
         db,
         flag=flag,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
         reason=reason,
     )
 
@@ -402,7 +464,7 @@ def list_remote_configs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """List all remote configs (admin only)."""
     configs = crud.get_remote_configs(db, skip=skip, limit=limit)
@@ -413,7 +475,7 @@ def list_remote_configs(
 def get_remote_config(
     config_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Get a specific remote config by ID (admin only)."""
     config = crud.get_remote_config(db, config_id)
@@ -426,14 +488,14 @@ def get_remote_config(
 def create_remote_config(
     data: RemoteConfigCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Create a new remote config (admin only)."""
     try:
         config = crud.create_remote_config(
             db,
             config_data=data.model_dump(),
-            changed_by=current_user.id,
+            changed_by=_user_id(current_user),
         )
         return config
     except ValueError as e:
@@ -446,22 +508,22 @@ def update_remote_config(
     data: RemoteConfigUpdate,
     reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Update a remote config (admin only)."""
     config = crud.get_remote_config(db, config_id)
     if not config:
         raise HTTPException(status_code=404, detail="Remote config not found")
-    
+
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     config = crud.update_remote_config(
         db,
         config=config,
         update_data=update_data,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
         reason=reason,
     )
     return config
@@ -472,17 +534,17 @@ def delete_remote_config(
     config_id: UUID,
     reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Soft delete a remote config (admin only)."""
     config = crud.get_remote_config(db, config_id)
     if not config:
         raise HTTPException(status_code=404, detail="Remote config not found")
-    
+
     crud.delete_remote_config(
         db,
         config=config,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
         reason=reason,
     )
 
@@ -497,7 +559,7 @@ def list_app_versions(
     limit: int = Query(100, ge=1, le=1000),
     platform: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """List all app versions (admin only)."""
     versions = crud.get_app_versions(db, skip=skip, limit=limit, platform=platform)
@@ -508,7 +570,7 @@ def list_app_versions(
 def get_app_version(
     version_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Get a specific app version by ID (admin only)."""
     version = crud.get_app_version(db, version_id)
@@ -521,7 +583,7 @@ def get_app_version(
 def create_app_version(
     data: AppVersionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Create a new app version (admin only)."""
     try:
@@ -532,7 +594,7 @@ def create_app_version(
         version = crud.create_app_version(
             db,
             version_data=version_data,
-            changed_by=current_user.id,
+            changed_by=_user_id(current_user),
         )
         return version
     except ValueError as e:
@@ -545,28 +607,42 @@ def update_app_version(
     data: AppVersionUpdate,
     reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """Update an app version (admin only)."""
     version = crud.get_app_version(db, version_id)
     if not version:
         raise HTTPException(status_code=404, detail="App version not found")
-    
+
     update_data = data.model_dump(exclude_unset=True)
     update_data.pop("download_url", None)  # stored as update_url
     if update_data.get("platform") == "desktop":
         update_data["platform"] = "all"
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     version = crud.update_app_version(
         db,
         app_version=version,
         update_data=update_data,
-        changed_by=current_user.id,
+        changed_by=_user_id(current_user),
         reason=reason,
     )
     return version
+
+
+@admin_router.delete("/admin/versions/{version_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_app_version(
+    version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin),
+):
+    """Delete an app version (admin only)."""
+    version = crud.get_app_version(db, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="App version not found")
+    db.delete(version)
+    db.commit()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -580,7 +656,7 @@ def list_audit_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
     """List configuration audit logs (admin only)."""
     logs = crud.get_audit_logs(
@@ -603,20 +679,16 @@ def trigger_kill_switch(
     enabled: bool = False,
     reason: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: Optional[User] = Depends(require_admin),
 ):
-    """
-    Emergency kill switch to immediately disable a feature.
-    
-    This is a convenience endpoint for emergency situations.
-    """
+    """Emergency kill switch to immediately disable a feature."""
     try:
         flag = service.trigger_kill_switch(
             db,
             feature_key=feature_key,
             enabled=enabled,
             reason=reason,
-            changed_by=current_user.id,
+            changed_by=_user_id(current_user),
         )
         return flag
     except ValueError as e:

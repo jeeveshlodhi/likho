@@ -15,7 +15,6 @@ import CollaboratorAvatars from '@/components/dashboard/CollaboratorAvatars';
 import ShareModal from '@/components/dashboard/ShareModal';
 import { CommentThread } from '@/components/dashboard/CommentThread';
 import { useTheme } from '@/providers/ThemeProvider';
-import { buildWikilink } from '@/lib/linkParser';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { NoteEditorBodyProps } from './types';
@@ -47,7 +46,7 @@ export function NoteEditorBody({
   scanNoteForLinks,
 }: NoteEditorBodyProps) {
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
-  const [linkQuery, setLinkQuery] = useState('');
+  const [linkInitialQuery, setLinkInitialQuery] = useState('');
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
   const { theme } = useTheme();
   const { setNoteContext } = useAiChatStore();
@@ -95,27 +94,60 @@ export function NoteEditorBody({
   }, [editor, isReadOnly]);
 
   const linkScanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Block that was active when the [[ menu was opened — saved before the
+  // suggestion input steals focus from BlockNote.
+  const savedCursorBlockRef = useRef<any>(null);
+
+  /** Capture the current cursor viewport rect (for fixed-position popup). */
+  const captureCursorViewportRect = (): { top: number; left: number } => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      // Add a small gap below the cursor line
+      return { top: rect.bottom + 6, left: rect.left };
+    }
+    return { top: 0, left: 0 };
+  };
 
   useEffect(() => {
     if (!editor) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+[ shortcut — capture everything synchronously then open
       if (e.key === '[' && e.ctrlKey) {
         e.preventDefault();
+        savedCursorBlockRef.current = editor.getTextCursorPosition?.()?.block ?? null;
+        setSuggestionPosition(captureCursorViewportRect());
+        setLinkInitialQuery('');
         setShowLinkSuggestions(true);
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          setSuggestionPosition({
-            top: rect.bottom + window.scrollY + 5,
-            left: rect.left + window.scrollX,
-          });
-        }
+        return;
+      }
+
+      // [[ trigger — wait for BlockNote to commit the character to the DOM,
+      // then capture both the block ref and the cursor rect in the same tick.
+      if (e.key === '[' && !e.ctrlKey && !e.metaKey && !showLinkSuggestions) {
+        setTimeout(() => {
+          if (!editor) return;
+          const pos = editor.getTextCursorPosition?.();
+          const block = pos?.block;
+          if (!block) return;
+          const blockText = (Array.isArray(block.content) ? block.content : [])
+            .map((c: any) => (c.type === 'text' ? c.text : ''))
+            .join('');
+          if (blockText.endsWith('[[')) {
+            // Capture position NOW — BlockNote has updated the DOM so the
+            // selection rect is valid. Save block ref before input steals focus.
+            savedCursorBlockRef.current = block;
+            setSuggestionPosition(captureCursorViewportRect());
+            setLinkInitialQuery('');
+            setShowLinkSuggestions(true);
+          }
+        }, 0);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editor]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, showLinkSuggestions]);
 
   useEffect(() => {
     if (!editor || !note) return;
@@ -127,6 +159,19 @@ export function NoteEditorBody({
       editor.replaceBlocks(editor.document, [{ type: 'paragraph' }]);
     }
   }, [note?.id, editor, provider]);
+
+  // Scan links/tags when a note is opened so Tags, Links, and Graph views
+  // reflect existing content without requiring the user to type anything.
+  useEffect(() => {
+    if (!editor || !note) return;
+    // Small delay so the editor has finished loading content first
+    const t = setTimeout(() => {
+      scanNoteForLinks({ ...note, content: editor.document }, notes, folders);
+    }, 300);
+    return () => clearTimeout(t);
+  // Only re-run when the note ID changes (i.e. a different note is opened)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id]);
 
   useEffect(() => {
     if (!provider || !editor) return;
@@ -144,12 +189,54 @@ export function NoteEditorBody({
 
   const handleLinkSelect = (suggestion: { id: string; title: string; type: 'note' | 'folder' }) => {
     if (!editor) return;
-    const wikilink = buildWikilink(suggestion.title);
-    editor.insertInlineContent([
-      { type: 'text', text: wikilink, styles: {} },
-    ]);
+
+    // Use the block saved when the menu was opened — getTextCursorPosition()
+    // won't work here because the suggestion input has stolen focus from BlockNote.
+    const targetBlock = savedCursorBlockRef.current;
+
+    if (targetBlock) {
+      // Strip the trailing [[ the user typed to open the menu
+      try {
+        const blockContent: any[] = targetBlock.content ?? [];
+        const rawText: string = blockContent
+          .map((c: any) => (c.type === 'text' ? c.text : ''))
+          .join('');
+        if (rawText.endsWith('[[')) {
+          editor.updateBlock(targetBlock, {
+            content: blockContent
+              .map((c: any) =>
+                c.type === 'text'
+                  ? { ...c, text: c.text.replace(/\[\[$/, '') }
+                  : c
+              )
+              .filter((c: any) => c.type !== 'text' || c.text !== ''),
+          });
+        }
+      } catch {
+        // Non-critical
+      }
+
+      editor.insertBlocks(
+        [
+          {
+            type: 'wikilink',
+            props: {
+              target: suggestion.title,
+              displayText: suggestion.title,
+              resolved: true,
+              targetNoteId: suggestion.type === 'note' ? suggestion.id : '',
+              targetFolderId: suggestion.type === 'folder' ? suggestion.id : '',
+            },
+          },
+        ],
+        targetBlock,
+        'after'
+      );
+    }
+
+    savedCursorBlockRef.current = null;
     setShowLinkSuggestions(false);
-    setLinkQuery('');
+    setLinkInitialQuery('');
   };
 
   const resolvedTheme =
@@ -268,12 +355,12 @@ export function NoteEditorBody({
                 />
               </BlockNoteView>
               <LinkSuggestionMenu
-                query={linkQuery}
+                initialQuery={linkInitialQuery}
                 isOpen={showLinkSuggestions}
                 onSelect={handleLinkSelect}
                 onClose={() => {
                   setShowLinkSuggestions(false);
-                  setLinkQuery('');
+                  setLinkInitialQuery('');
                 }}
                 position={suggestionPosition}
               />
@@ -319,7 +406,7 @@ export function NoteEditorBody({
             defaultCollapsed={true}
           />
         ) : canCollab ? (
-          <div className="w-80 border-l border-border bg-background overflow-y-auto">
+          <div className="w-[340px] border-l border-border bg-background flex flex-col shrink-0">
             <CommentThread
               pageId={noteId}
               canComment={canComment}

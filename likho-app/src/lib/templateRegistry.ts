@@ -35,6 +35,7 @@ export interface PageTemplate {
   features?: string[];
   isNew?: boolean;
   isBeta?: boolean;
+  comingSoon?: boolean;
 }
 
 export type TemplateCategory =
@@ -385,6 +386,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createMeetingNotesContent,
     features: ['Agenda', 'Action items', 'Attendees'],
+    comingSoon: true,
   },
   {
     id: 'documentation',
@@ -398,6 +400,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createDocumentationContent,
     features: ['Structure', 'Navigation', 'Examples'],
+    comingSoon: true,
   },
 
   // Planning
@@ -426,6 +429,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createProjectPlanContent,
     features: ['Goals', 'Timeline', 'Resources'],
+    comingSoon: true,
   },
 
   // Knowledge
@@ -441,6 +445,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createJournalContent,
     features: ['Reflection', 'Priorities', 'Ideas'],
+    comingSoon: true,
   },
 
   // Visual
@@ -469,6 +474,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createBrainstormCanvasContent,
     features: ['Mind map', 'Ideas', 'Connections'],
+    comingSoon: true,
   },
 ];
 

@@ -30,6 +30,14 @@ interface WorkspaceState {
   deleteNote: (id: string) => void;
   moveNote: (noteId: string, targetFolderId: string | null) => void;
 
+  // Space transfer actions
+  /** Change a note's space and optionally update its ID (when offline→online creates a new UUID). */
+  updateNoteSpace: (noteId: string, newSpaceType: SpaceType, newId?: string, newFolderId?: string | null) => void;
+  /** Replace a folder's ID everywhere in the store (all child folder parentIds and note folderIds are updated). */
+  replaceFolder: (oldId: string, newId: string) => void;
+  /** Change a folder's spaceType without changing its ID. */
+  updateFolderSpace: (folderId: string, newSpaceType: SpaceType) => void;
+
   // UI actions
   setActiveNote: (id: string | null) => void;
   setActiveFolder: (id: string | null) => void;
@@ -200,6 +208,47 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             n.id === noteId
               ? { ...n, folderId: targetFolderId, updatedAt: new Date().toISOString() }
               : n
+          ),
+        })),
+
+      updateNoteSpace: (noteId, newSpaceType, newId, newFolderId) =>
+        set((state) => {
+          const notes = state.notes.map((n) => {
+            if (n.id !== noteId) return n;
+            return {
+              ...n,
+              id: newId ?? n.id,
+              spaceType: newSpaceType,
+              folderId: newFolderId !== undefined ? newFolderId : n.folderId,
+              updatedAt: new Date().toISOString(),
+            };
+          });
+          return {
+            notes,
+            activeNoteId:
+              newId && state.activeNoteId === noteId ? newId : state.activeNoteId,
+          };
+        }),
+
+      replaceFolder: (oldId, newId) =>
+        set((state) => ({
+          folders: state.folders.map((f) => {
+            if (f.id === oldId) return { ...f, id: newId, updatedAt: new Date().toISOString() };
+            if (f.parentId === oldId) return { ...f, parentId: newId };
+            return f;
+          }),
+          notes: state.notes.map((n) =>
+            n.folderId === oldId ? { ...n, folderId: newId } : n
+          ),
+          activeFolderId: state.activeFolderId === oldId ? newId : state.activeFolderId,
+        })),
+
+      updateFolderSpace: (folderId, newSpaceType) =>
+        set((state) => ({
+          folders: state.folders.map((f) =>
+            f.id === folderId
+              ? { ...f, spaceType: newSpaceType, updatedAt: new Date().toISOString() }
+              : f
           ),
         })),
 

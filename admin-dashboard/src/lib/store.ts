@@ -73,7 +73,7 @@ interface AuthState {
   setApiKey: (key: string) => void;
 }
 
-import { activeApi } from './api';
+import { activeApi, api } from './api';
 
 export const useDashboardStore = create<DashboardState>((set) => ({
   stats: null,
@@ -339,7 +339,7 @@ export const useErrorStore = create<ErrorState>((set, get) => ({
 export const useAuthStore = create<AuthState>((set) => ({
   apiKey: localStorage.getItem('admin_api_key') || '',
   setApiKey: (key) => {
-    localStorage.setItem('admin_api_key', key);
+    api.setApiKey(key); // updates localStorage + any future requests
     set({ apiKey: key });
   },
 }));

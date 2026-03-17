@@ -23,7 +23,6 @@ import { useHistory } from './hooks/useHistory';
 import { Toolbar } from './ui/Toolbar';
 import { TopBar } from './ui/TopBar';
 import { PropertiesPanel } from './ui/PropertiesPanel';
-import { BottomBar } from './ui/BottomBar';
 import { ExportModal } from './ui/ExportModal';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -997,6 +996,9 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         canRedo={canRedo}
         onClear={clearCanvas}
         onExport={() => setShowExportModal(true)}
+        camera={camera}
+        onZoom={setZoom}
+        onZoomFit={zoomToFit}
       />
 
       {/* Top style bar */}
@@ -1019,16 +1021,6 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         onSendBackward={sendBackward}
         onGroup={groupSelected}
         onUngroup={ungroupSelected}
-      />
-
-      {/* Bottom bar */}
-      <BottomBar
-        camera={camera}
-        cursor={cursor}
-        elementCount={elements.length}
-        selectedCount={selectedIds.size}
-        onZoom={setZoom}
-        onZoomFit={zoomToFit}
       />
 
       {/* Export modal */}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { FileText, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { FileText, Pencil, Trash2, MoreHorizontal, Cloud, HardDrive } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { Note } from '@/types/workspace';
 import ContextMenu, { type ContextMenuItem } from '@/components/shared/ContextMenu';
@@ -8,9 +8,15 @@ import InlineEdit from '@/components/shared/InlineEdit';
 import { getTemplateById } from '@/lib/templateRegistry';
 
 export const SIDEBAR_NOTE_DRAG_TYPE = 'application/x-likho-sidebar-note';
+/** Space-specific drag type markers — present during dragover so drop zones can
+ *  detect cross-space drags without reading the data payload (which is restricted). */
+export const SIDEBAR_NOTE_ONLINE_TYPE = 'application/x-likho-sidebar-note-online';
+export const SIDEBAR_NOTE_OFFLINE_TYPE = 'application/x-likho-sidebar-note-offline';
 
 interface NoteItemProps {
   note: Note;
+  /** Called when the user triggers "Move to Online/Offline" from the context menu. */
+  onMoveToSpace?: (note: Note) => void;
 }
 
 // Get the appropriate icon for a note based on its pageType
@@ -31,7 +37,7 @@ function getNoteIcon(note: Note) {
   return <FileText size={14} className="text-muted-foreground" />;
 }
 
-export default function NoteItem({ note }: NoteItemProps) {
+export default function NoteItem({ note, onMoveToSpace }: NoteItemProps) {
   const navigate = useNavigate();
   const { activeNoteId, setActiveNote, deleteNote, updateNote } = useWorkspaceStore();
   const [editing, setEditing] = useState(false);
@@ -42,7 +48,15 @@ export default function NoteItem({ note }: NoteItemProps) {
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
-      e.dataTransfer.setData(SIDEBAR_NOTE_DRAG_TYPE, JSON.stringify({ noteId: note.id, spaceType: note.spaceType }));
+      e.dataTransfer.setData(
+        SIDEBAR_NOTE_DRAG_TYPE,
+        JSON.stringify({ noteId: note.id, spaceType: note.spaceType })
+      );
+      // Set space-specific marker so drop zones can detect cross-space drags during dragover
+      e.dataTransfer.setData(
+        note.spaceType === 'online' ? SIDEBAR_NOTE_ONLINE_TYPE : SIDEBAR_NOTE_OFFLINE_TYPE,
+        ''
+      );
       e.dataTransfer.effectAllowed = 'move';
       setIsDragging(true);
     },
@@ -70,6 +84,20 @@ export default function NoteItem({ note }: NoteItemProps) {
       icon: <Pencil size={14} />,
       onClick: () => setEditing(true),
     },
+    ...(onMoveToSpace
+      ? [
+          {
+            label: note.spaceType === 'online' ? 'Move to Offline' : 'Move to Online',
+            icon:
+              note.spaceType === 'online' ? (
+                <HardDrive size={14} />
+              ) : (
+                <Cloud size={14} />
+              ),
+            onClick: () => onMoveToSpace(note),
+          },
+        ]
+      : []),
     {
       label: 'Delete',
       icon: <Trash2 size={14} />,

@@ -3,17 +3,16 @@ import { useNavigate } from 'react-router';
 import { ChevronDown, Plus, Cloud, HardDrive, FolderPlus } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { PageType, SpaceType } from '@/types/workspace';
+import type { Note } from '@/types/workspace';
 import { buildFolderTree, getRootNotes } from '@/utils/folderTree';
 import { useWorkspace, useSpaces, useCreatePage, useMovePage } from '@/hooks/useWorkspace';
-import {
-  getTemplateById,
-  getTemplateContent,
-  type TemplateContent,
-} from '@/lib/templateRegistry';
+import { getTemplateById, getTemplateContent } from '@/lib/templateRegistry';
 import FolderItem from './FolderItem';
 import NoteItem from './NoteItem';
 import NewPageModal from './NewPageModal';
-import { SIDEBAR_NOTE_DRAG_TYPE } from './NoteItem';
+import { SIDEBAR_NOTE_DRAG_TYPE, SIDEBAR_NOTE_ONLINE_TYPE, SIDEBAR_NOTE_OFFLINE_TYPE } from './NoteItem';
+import { useSpaceTransfer } from '@/hooks/useSpaceTransfer';
+import { isTauri } from '@/utils/platform';
 
 interface SpaceSectionProps {
   spaceType: SpaceType;
@@ -48,6 +47,16 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
   const createPageMutation = useCreatePage();
   const movePageMutation = useMovePage();
   const moveNote = useWorkspaceStore((s) => s.moveNote);
+
+  // Space transfer — called once here, callbacks passed to child components
+  const { moveNote: transferNote, moveFolder: transferFolder } = useSpaceTransfer();
+
+  // "Move to Offline" is only possible in the Tauri desktop app (no Offline Space on web).
+  // "Move to Online" is always possible (auth is checked inside the hook).
+  // So: show transfer actions only when running in Tauri, OR when this IS the offline space
+  // (in which case the only direction is → online, which is always valid in web too — though
+  // the offline space itself is never rendered in web, making this a belt-and-suspenders guard).
+  const canTransferToOtherSpace = spaceType === 'offline' || isTauri();
 
   const config = spaceConfig[spaceType];
   const Icon = config.icon;
@@ -184,19 +193,42 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
     [spaceType, notes, moveNote, workspace?.id, spaces, movePageMutation]
   );
 
+  // ── Root drop zone ──────────────────────────────────────────────────────────
   const [rootZoneDragOver, setRootZoneDragOver] = useState(false);
-  const handleRootDragOver = useCallback((e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setRootZoneDragOver(true);
-  }, []);
+  const [rootZoneCrossSpaceDragOver, setRootZoneCrossSpaceDragOver] = useState(false);
+
+  // Which marker type signals an item from the OTHER space?
+  const crossSpaceMarker =
+    spaceType === 'online' ? SIDEBAR_NOTE_OFFLINE_TYPE : SIDEBAR_NOTE_ONLINE_TYPE;
+
+  const handleRootDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      if (canTransferToOtherSpace && e.dataTransfer.types.includes(crossSpaceMarker)) {
+        setRootZoneCrossSpaceDragOver(true);
+        setRootZoneDragOver(false);
+      } else {
+        setRootZoneDragOver(true);
+        setRootZoneCrossSpaceDragOver(false);
+      }
+    },
+    [crossSpaceMarker, canTransferToOtherSpace]
+  );
+
   const handleRootDragLeave = useCallback((e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) setRootZoneDragOver(false);
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setRootZoneDragOver(false);
+      setRootZoneCrossSpaceDragOver(false);
+    }
   }, []);
+
   const handleRootDrop = useCallback(
     (e: React.DragEvent) => {
       setRootZoneDragOver(false);
+      setRootZoneCrossSpaceDragOver(false);
       if (!e.dataTransfer.types.includes(SIDEBAR_NOTE_DRAG_TYPE)) return;
       e.preventDefault();
       try {
@@ -204,14 +236,45 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
           noteId: string;
           spaceType: string;
         };
-        if (payload.spaceType !== spaceType) return;
-        handleDropNote(payload.noteId, null);
+
+        if (payload.spaceType === spaceType) {
+          // Same-space drop: move note to root level
+          handleDropNote(payload.noteId, null);
+        } else if (canTransferToOtherSpace) {
+          // Cross-space drop: trigger a space transfer for this note.
+          // Guard: only reachable in Tauri (web has no Offline Space to drag from/to).
+          const note = notes.find((n) => n.id === payload.noteId);
+          if (note) transferNote(note);
+        }
       } catch {
-        // ignore
+        // ignore malformed payload
       }
     },
-    [spaceType, handleDropNote]
+    [spaceType, handleDropNote, notes, transferNote, canTransferToOtherSpace]
   );
+
+  // ── Drop-zone label text ────────────────────────────────────────────────────
+  const otherSpaceLabel = spaceType === 'online' ? 'Offline Space' : 'Online Space';
+  const isEmpty = folderTree.length === 0 && rootNotes.length === 0;
+
+  let rootZoneText: string;
+  if (rootZoneCrossSpaceDragOver) {
+    rootZoneText = `Move to ${config.label}`;
+  } else if (rootZoneDragOver) {
+    rootZoneText = 'Drop to move out of folder';
+  } else if (isEmpty) {
+    rootZoneText = 'No folder';
+  } else {
+    rootZoneText = 'Drop here for root level';
+  }
+
+  const rootZoneClass = rootZoneCrossSpaceDragOver
+    ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+    : rootZoneDragOver
+      ? 'border-primary/50 bg-primary/10 text-primary'
+      : isEmpty
+        ? 'border-border text-muted-foreground'
+        : 'border-transparent text-muted-foreground/50 hover:border-border hover:text-muted-foreground';
 
   return (
     <div className="mb-2">
@@ -278,30 +341,34 @@ export default function SpaceSection({ spaceType }: SpaceSectionProps) {
             </div>
           )}
 
-          {/* Root drop zone: drop here to remove note from folder */}
+          {/* Root drop zone: drop here to remove note from folder, or transfer cross-space */}
           <div
             onDragOver={handleRootDragOver}
             onDragLeave={handleRootDragLeave}
             onDrop={handleRootDrop}
-            className={`mb-0.5 rounded-md border border-dashed px-2 py-1.5 text-center text-xs transition-colors ${rootZoneDragOver
-              ? 'border-primary/50 bg-primary/10 text-primary'
-              : folderTree.length === 0 && rootNotes.length === 0
-                ? 'border-border text-muted-foreground'
-                : 'border-transparent text-muted-foreground/50 hover:border-border hover:text-muted-foreground'
-              }`}
+            className={`mb-0.5 rounded-md border border-dashed px-2 py-1.5 text-center text-xs transition-colors ${rootZoneClass}`}
           >
-            {rootZoneDragOver ? 'Drop to move out of folder' : folderTree.length === 0 && rootNotes.length === 0 ? 'No folder' : 'Drop here for root level'}
+            {rootZoneText}
           </div>
 
           {/* Folders */}
           {folderTree.map((folder) => (
-            <FolderItem key={folder.id} folder={folder} onDropNote={(noteId, targetFolderId) => handleDropNote(noteId, targetFolderId)} />
+            <FolderItem
+              key={folder.id}
+              folder={folder}
+              onDropNote={(noteId, targetFolderId) => handleDropNote(noteId, targetFolderId)}
+              onMoveToSpace={canTransferToOtherSpace ? transferFolder : undefined}
+              onNoteMoveToSpace={canTransferToOtherSpace ? transferNote : undefined}
+            />
           ))}
 
           {/* Root notes (not in any folder) */}
           {rootNotes.map((note) => (
             <div key={note.id} className="pl-2">
-              <NoteItem note={note} />
+              <NoteItem
+                note={note}
+                onMoveToSpace={canTransferToOtherSpace ? transferNote : undefined}
+              />
             </div>
           ))}
 

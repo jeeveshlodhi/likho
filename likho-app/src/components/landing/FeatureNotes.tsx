@@ -13,10 +13,10 @@ const blockTypes = [
 ];
 
 const features = [
-  { label: 'Slash commands', desc: 'Type / for quick blocks' },
-  { label: 'Markdown support', desc: 'Write in your natural style' },
-  { label: 'Drag & drop', desc: 'Reorder blocks with ease' },
-  { label: 'AI assistance', desc: 'Smart writing suggestions' },
+  { label: 'Slash commands', desc: 'Type / for quick blocks', comingSoon: false },
+  { label: 'Markdown support', desc: 'Write in your natural style', comingSoon: false },
+  { label: 'Drag & drop', desc: 'Reorder blocks with ease', comingSoon: false },
+  { label: 'AI assistance', desc: 'Smart writing suggestions', comingSoon: true },
 ];
 
 const FeatureNotes = () => {
@@ -220,13 +220,23 @@ const FeatureNotes = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ delay: 0.4 + i * 0.08, duration: 0.5 }}
-                  className="p-4 rounded-xl"
+                  className="relative p-4 rounded-xl"
                   style={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #e5e7eb',
+                    opacity: feature.comingSoon ? 0.65 : 1,
                   }}
                 >
-                  <h4 className="text-sm font-semibold mb-1" style={{ color: '#111827' }}>
+                  {feature.comingSoon && (
+                    <span
+                      className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style={{ backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Soon
+                    </span>
+                  )}
+                  <h4 className="text-sm font-semibold mb-1" style={{ color: feature.comingSoon ? '#9ca3af' : '#111827' }}>
                     {feature.label}
                   </h4>
                   <p className="text-xs" style={{ color: '#6b7280' }}>{feature.desc}</p>

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",   # admin-dashboard (Vite fallback port)
+        "http://127.0.0.1:5174",
         "http://localhost:1420",
         "http://127.0.0.1:1420",
         "tauri://localhost",
@@ -46,6 +48,10 @@ class Settings(BaseSettings):
     
     # Graceful degradation: if True, allows requests when Redis is down
     RATE_LIMIT_GRACEFUL_DEGRADATION: bool = True
+
+    # Admin dashboard API key (optional; for X-Admin-API-Key header auth)
+    # Generate a strong random key: python -c "import secrets; print(secrets.token_hex(32))"
+    ADMIN_API_KEY: str = ""
 
     # S3 releases bucket (optional; leave empty to disable presigned upload)
     AWS_ACCESS_KEY_ID: str = ""

@@ -19,22 +19,48 @@ const ALIAS_REGEX = /^([^|#\^]+)(?:\|([^#\^]+))?(?:#([^\^]+))?(?:\^(.+))?$/;
 
 export function parseContentForLinks(note: Note): ParsedLink[] {
   const links: ParsedLink[] = [];
-  
+
   if (!note.content) return links;
-  
+
   // Parse content based on type
   const content = note.content;
   let textToParse = '';
-  
+
   if (typeof content === 'string') {
-    textToParse = content;
-  } else if (content.data && Array.isArray(content.data.content)) {
-    // BlockNote content - extract text from all blocks
-    textToParse = extractTextFromBlockNote(content.data.content);
-  } else if (content.data && typeof content.data === 'object') {
-    textToParse = JSON.stringify(content.data);
+    // Try to parse as JSON first (serialised BlockNote doc)
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        textToParse = extractTextFromBlockNote(parsed);
+      } else {
+        textToParse = content;
+      }
+    } catch {
+      textToParse = content;
+    }
+  } else if (Array.isArray(content)) {
+    // Direct BlockNote document — editor.document returns a flat array of blocks
+    textToParse = extractTextFromBlockNote(content);
+  } else if (typeof content === 'object' && content !== null) {
+    if ((content as any).type === 'doc' && Array.isArray((content as any).content)) {
+      // ProseMirror-style { type: 'doc', content: [...] }
+      textToParse = extractTextFromBlockNote((content as any).content);
+    } else if ((content as any).data && Array.isArray((content as any).data)) {
+      // { data: [...] } wrapper
+      textToParse = extractTextFromBlockNote((content as any).data);
+    } else if ((content as any).data && Array.isArray((content as any).data.content)) {
+      // { data: { content: [...] } } wrapper
+      textToParse = extractTextFromBlockNote((content as any).data.content);
+    } else {
+      textToParse = JSON.stringify(content);
+    }
   }
   
+  // Reset lastIndex — global /g regexes keep state between calls; forgetting
+  // this causes them to start mid-string and silently skip matches.
+  WIKILINK_REGEX.lastIndex = 0;
+  TAG_REGEX.lastIndex = 0;
+
   // Find wikilinks
   let match;
   while ((match = WIKILINK_REGEX.exec(textToParse)) !== null) {
@@ -104,32 +130,50 @@ function parseLinkContent(content: string): ParsedLinkContent {
 
 function extractTextFromBlockNote(blocks: any[]): string {
   let text = '';
-  
+
   function extractFromBlock(block: any) {
     if (typeof block === 'string') {
       text += block + ' ';
       return;
     }
-    
-    if (block.content) {
-      if (Array.isArray(block.content)) {
-        block.content.forEach((c: any) => {
-          if (typeof c === 'string') {
-            text += c + ' ';
-          } else if (c.text) {
+
+    if (!block || typeof block !== 'object') return;
+
+    // Wikilink blocks store their target in props, not in content (content:"none")
+    if (block.type === 'wikilink' && block.props?.target) {
+      text += `[[${block.props.target}]] `;
+      return;
+    }
+
+    // Tag blocks store their tag name in props
+    if (block.type === 'tag' && block.props?.tagName) {
+      text += `#${block.props.tagName} `;
+      return;
+    }
+
+    // Inline content array — each item is { type: 'text', text: '...', styles: {} }
+    if (Array.isArray(block.content)) {
+      block.content.forEach((c: any) => {
+        if (typeof c === 'string') {
+          text += c + ' ';
+        } else if (c && typeof c === 'object') {
+          if (c.type === 'text' && typeof c.text === 'string') {
+            text += c.text + ' ';
+          } else if (typeof c.text === 'string') {
             text += c.text + ' ';
           }
-        });
-      } else if (typeof block.content === 'string') {
-        text += block.content + ' ';
-      }
+        }
+      });
+    } else if (typeof block.content === 'string') {
+      text += block.content + ' ';
     }
-    
-    if (block.children && Array.isArray(block.children)) {
+
+    // Recurse into nested blocks (indented items, etc.)
+    if (Array.isArray(block.children)) {
       block.children.forEach(extractFromBlock);
     }
   }
-  
+
   blocks.forEach(extractFromBlock);
   return text;
 }

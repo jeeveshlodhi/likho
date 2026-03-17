@@ -15,6 +15,7 @@ const featureTabs = [
     description: 'Rich block-based editor',
     color: '#ec4899',
     bg: '#fdf2f8',
+    comingSoon: false,
   },
   {
     id: 'kanban',
@@ -23,6 +24,7 @@ const featureTabs = [
     description: 'Visual task management',
     color: '#f59e0b',
     bg: '#fffbeb',
+    comingSoon: false,
   },
   {
     id: 'canvas',
@@ -31,6 +33,7 @@ const featureTabs = [
     description: 'Freeform visual thinking',
     color: '#10b981',
     bg: '#f0fdf4',
+    comingSoon: false,
   },
   {
     id: 'ai',
@@ -39,6 +42,7 @@ const featureTabs = [
     description: 'Automate & summarize',
     color: '#06b6d4',
     bg: '#ecfeff',
+    comingSoon: true,
   },
 ];
 
@@ -303,11 +307,13 @@ const Hero = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { if (!tab.comingSoon) setActiveTab(tab.id); }}
                   className="flex items-center gap-2 px-4 py-4 text-left transition-colors relative"
                   style={{
                     backgroundColor: isActive ? '#ffffff' : 'transparent',
                     borderBottom: isActive ? `2px solid ${tab.color}` : '2px solid transparent',
+                    cursor: tab.comingSoon ? 'default' : 'pointer',
+                    opacity: tab.comingSoon ? 0.6 : 1,
                   }}
                 >
                   <div
@@ -317,11 +323,22 @@ const Hero = () => {
                     <Icon className="w-4 h-4" style={{ color: isActive ? tab.color : '#9ca3af' }} />
                   </div>
                   <div className="hidden sm:block text-left">
-                    <div
-                      className="text-sm font-semibold leading-tight"
-                      style={{ color: isActive ? '#111827' : '#6b7280' }}
-                    >
-                      {tab.label}
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="text-sm font-semibold leading-tight"
+                        style={{ color: tab.comingSoon ? '#9ca3af' : isActive ? '#111827' : '#6b7280' }}
+                      >
+                        {tab.label}
+                      </span>
+                      {tab.comingSoon && (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                          style={{ backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}
+                        >
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Soon
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs leading-tight" style={{ color: '#9ca3af' }}>
                       {tab.description}

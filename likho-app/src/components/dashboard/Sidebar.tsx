@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Link2, Hash, Share2, Clock, Plus, Activity, MessageSquare, BarChart3, Users, FolderOpen, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Share2, Clock, Plus, MessageSquare, Users, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
@@ -208,46 +208,11 @@ export default function Sidebar() {
             Graph View
           </button>
           <button
-            onClick={() => navigate('/dashboard/tags')}
-            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-          >
-            <Hash size={16} />
-            Tags
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/links')}
-            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-          >
-            <Link2 size={16} />
-            Links
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/auto-group')}
-            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-          >
-            <FolderOpen size={16} />
-            Auto-group Notes
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/workspace-health')}
-            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-          >
-            <Activity size={16} />
-            Workspace Health
-          </button>
-          <button
             onClick={() => navigate('/dashboard/ai-chat')}
             className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
           >
             <MessageSquare size={16} />
             Ask AI
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/digest')}
-            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-          >
-            <BarChart3 size={16} />
-            Note Digest
           </button>
         </div>
       </div>

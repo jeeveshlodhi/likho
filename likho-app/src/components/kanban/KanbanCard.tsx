@@ -58,12 +58,13 @@ export default function KanbanCardComponent({ card, index, boardLabels, onUpdate
             {(provided, snapshot) => (
                 <div
                     {...provided.draggableProps}
+                    {...provided.dragHandleProps}
                     ref={provided.innerRef}
                     className={clsx(
-                        'group relative mb-2 flex min-h-[40px] flex-col rounded-lg border bg-card p-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-ring cursor-pointer',
+                        'group relative mb-3 flex min-h-[80px] flex-col rounded-xl border bg-card p-4 shadow-sm transition-all focus-within:ring-2 focus-within:ring-ring cursor-grab active:cursor-grabbing',
                         snapshot.isDragging
-                            ? 'shadow-lg ring-1 ring-ring border-transparent z-50'
-                            : 'border-border hover:border-muted-foreground/30'
+                            ? 'shadow-xl ring-2 ring-ring border-transparent z-50 rotate-2 scale-105'
+                            : 'border-border hover:border-muted-foreground/30 hover:shadow-md hover:-translate-y-0.5'
                     )}
                     onClick={(e) => {
                         if (!isEditing && !snapshot.isDragging) {
@@ -76,18 +77,17 @@ export default function KanbanCardComponent({ card, index, boardLabels, onUpdate
                         setIsEditing(true);
                     }}
                 >
-                    {/* Drag Handle */}
+                    {/* Drag Handle Indicator - visual only now */}
                     <div
-                        {...provided.dragHandleProps}
-                        className="absolute left-1 top-1/2 -translate-y-1/2 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground cursor-grab active:cursor-grabbing hover:bg-muted rounded"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground hover:bg-muted rounded"
                     >
-                        <GripVertical size={14} />
+                        <GripVertical size={16} />
                     </div>
 
-                    <div className="pl-4">
+                    <div className="pl-5">
                         {/* Labels row */}
                         {cardLabels.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-1.5">
+                            <div className="flex flex-wrap gap-1.5 mb-2">
                                 {cardLabels.map(label => (
                                     <LabelBadge key={label.id} label={label} />
                                 ))}
@@ -108,21 +108,21 @@ export default function KanbanCardComponent({ card, index, boardLabels, onUpdate
                                 rows={Math.max(2, val.split('\n').length)}
                             />
                         ) : (
-                            <div className="text-sm text-foreground whitespace-pre-wrap break-words min-h-[20px]">
+                            <div className="text-sm text-foreground whitespace-pre-wrap break-words min-h-[24px] leading-relaxed">
                                 {card.content || <span className="text-muted-foreground italic">Empty card</span>}
                             </div>
                         )}
 
                         {/* Footer: priority + due date */}
                         {(card.priority || card.dueDate) && (
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <div className="flex items-center gap-2 mt-3 flex-wrap">
                                 {card.priority && <PriorityBadge priority={card.priority} />}
                                 {card.dueDate && (
                                     <span className={clsx(
-                                        'inline-flex items-center gap-1 text-[10px]',
+                                        'inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-muted',
                                         isPast(parseISO(card.dueDate)) ? 'text-destructive font-medium' : 'text-muted-foreground'
                                     )}>
-                                        <Calendar size={10} />
+                                        <Calendar size={11} />
                                         {format(parseISO(card.dueDate), 'MMM d')}
                                     </span>
                                 )}

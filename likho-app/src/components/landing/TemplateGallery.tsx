@@ -7,14 +7,14 @@ import {
 } from 'lucide-react';
 
 const templates = [
-  { name: 'Product Roadmap', icon: Rocket, bg: '#fff7ed', color: '#ea580c', category: 'Product' },
-  { name: 'Meeting Notes', icon: Calendar, bg: '#eff6ff', color: '#2563eb', category: 'Work' },
-  { name: 'Startup Dashboard', icon: Layout, bg: '#faf5ff', color: '#9333ea', category: 'Startup' },
-  { name: 'Weekly Planner', icon: Target, bg: '#f0fdf4', color: '#16a34a', category: 'Personal' },
-  { name: 'Content Calendar', icon: Calendar, bg: '#fdf2f8', color: '#db2777', category: 'Marketing' },
-  { name: 'Idea Board', icon: Lightbulb, bg: '#fefce8', color: '#ca8a04', category: 'Creative' },
-  { name: 'Team Wiki', icon: Users, bg: '#ecfeff', color: '#0891b2', category: 'Team' },
-  { name: 'Analytics Dashboard', icon: BarChart3, bg: '#f0f9ff', color: '#0284c7', category: 'Data' },
+  { name: 'Product Roadmap', icon: Rocket, bg: '#fff7ed', color: '#ea580c', category: 'Product', comingSoon: true },
+  { name: 'Meeting Notes', icon: Calendar, bg: '#eff6ff', color: '#2563eb', category: 'Work', comingSoon: false },
+  { name: 'Startup Dashboard', icon: Layout, bg: '#faf5ff', color: '#9333ea', category: 'Startup', comingSoon: true },
+  { name: 'Weekly Planner', icon: Target, bg: '#f0fdf4', color: '#16a34a', category: 'Personal', comingSoon: true },
+  { name: 'Content Calendar', icon: Calendar, bg: '#fdf2f8', color: '#db2777', category: 'Marketing', comingSoon: true },
+  { name: 'Idea Board', icon: Lightbulb, bg: '#fefce8', color: '#ca8a04', category: 'Creative', comingSoon: true },
+  { name: 'Team Wiki', icon: Users, bg: '#ecfeff', color: '#0891b2', category: 'Team', comingSoon: true },
+  { name: 'Analytics Dashboard', icon: BarChart3, bg: '#f0f9ff', color: '#0284c7', category: 'Data', comingSoon: true },
 ];
 
 const TemplateGallery = () => {
@@ -63,32 +63,44 @@ const TemplateGallery = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: 0.08 * i, duration: 0.5 }}
-                whileHover={{ y: -3 }}
-                className="group relative rounded-xl p-4 cursor-pointer transition-all"
+                whileHover={template.comingSoon ? {} : { y: -3 }}
+                className={`group relative rounded-xl p-4 transition-all ${template.comingSoon ? 'cursor-default' : 'cursor-pointer'}`}
                 style={{ backgroundColor: '#fafafa', border: '1px solid #e5e7eb' }}
                 onMouseEnter={(e) => {
+                  if (template.comingSoon) return;
                   e.currentTarget.style.borderColor = template.color + '66';
                   e.currentTarget.style.boxShadow = `0 4px 16px ${template.color}18`;
                 }}
                 onMouseLeave={(e) => {
+                  if (template.comingSoon) return;
                   e.currentTarget.style.borderColor = '#e5e7eb';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                  style={{ backgroundColor: template.bg }}
+                  style={{ backgroundColor: template.bg, opacity: template.comingSoon ? 0.6 : 1 }}
                 >
                   <Icon className="w-5 h-5" style={{ color: template.color }} />
                 </div>
                 <div className="text-[10px] font-medium mb-0.5" style={{ color: '#9ca3af' }}>{template.category}</div>
-                <h3 className="text-sm font-semibold" style={{ color: '#111827' }}>{template.name}</h3>
+                <h3 className="text-sm font-semibold" style={{ color: template.comingSoon ? '#9ca3af' : '#111827' }}>{template.name}</h3>
 
-                <div
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ArrowRight className="w-3.5 h-3.5" style={{ color: template.color }} />
-                </div>
+                {template.comingSoon ? (
+                  <div className="absolute top-2.5 right-2.5">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style={{ backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Soon
+                    </span>
+                  </div>
+                ) : (
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="w-3.5 h-3.5" style={{ color: template.color }} />
+                  </div>
+                )}
               </motion.div>
             );
           })}

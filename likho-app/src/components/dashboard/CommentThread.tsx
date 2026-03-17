@@ -117,19 +117,29 @@ export function CommentThread({ pageId, blockId, canComment, canResolve }: Comme
   }
 
   return (
-    <div className="w-80 space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium">Comments</h4>
-        <span className="text-xs text-muted-foreground">
-          {filteredComments.length} comment{filteredComments.length !== 1 ? 's' : ''}
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={18} className="text-primary" />
+          <h4 className="font-semibold text-sm">Comments</h4>
+        </div>
+        <span className="text-xs font-medium px-2 py-1 rounded-full bg-muted">
+          {filteredComments.length}
         </span>
       </div>
 
-      <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+      {/* Comments List */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {filteredComments.length === 0 && (
-          <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            No comments yet
-            {canComment && '. Be the first to share your thoughts!'}
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <MessageSquare size={20} className="text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground font-medium">No comments yet</p>
+            {canComment && (
+              <p className="text-xs text-muted-foreground mt-1">Be the first to share your thoughts!</p>
+            )}
           </div>
         )}
 
@@ -147,22 +157,25 @@ export function CommentThread({ pageId, blockId, canComment, canResolve }: Comme
         ))}
       </div>
 
+      {/* New Comment Input */}
       {canComment && !replyingTo && (
-        <div className="space-y-2">
-          <Textarea
-            placeholder="Add a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="min-h-[80px] resize-none"
-          />
-          <Button
-            onClick={() => handleSubmit()}
-            disabled={!newComment.trim() || createComment.isPending}
-            size="sm"
-            className="w-full"
-          >
-            {createComment.isPending ? 'Posting...' : 'Post Comment'}
-          </Button>
+        <div className="px-4 py-4 border-t border-border bg-muted/30">
+          <div className="space-y-3">
+            <Textarea
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="min-h-[90px] resize-none bg-background border-muted-foreground/20 focus:border-primary/50 text-sm"
+            />
+            <Button
+              onClick={() => handleSubmit()}
+              disabled={!newComment.trim() || createComment.isPending}
+              size="sm"
+              className="w-full"
+            >
+              {createComment.isPending ? 'Posting...' : 'Post Comment'}
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -194,65 +207,74 @@ function CommentItem({
   return (
     <div
       className={cn(
-        'rounded-lg border p-3',
-        isResolved && 'bg-muted opacity-60',
-        isReply && 'ml-4 border-l-2'
+        'group rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md',
+        isResolved && 'bg-muted/50 opacity-70',
+        isReply && 'ml-4 border-l-4 border-l-primary'
       )}
     >
-      <div className="flex items-start gap-2">
-        <Avatar className="h-6 w-6">
-          <AvatarFallback className="text-xs">
+      <div className="flex items-start gap-3">
+        <Avatar className="h-8 w-8 shrink-0 ring-2 ring-background shadow-sm">
+          <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
             {comment.author.name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{comment.author.name}</span>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">
+          {/* Header: Name, Time, Menu */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold truncate">{comment.author.name}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
               </span>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal size={14} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {canResolve && !isResolved && (
-                    <DropdownMenuItem onClick={onResolve}>
-                      <Check size={14} className="mr-2" />
-                      Resolve
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                    <Trash2 size={14} className="mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                >
+                  <MoreHorizontal size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                {canResolve && !isResolved && (
+                  <DropdownMenuItem onClick={onResolve} className="text-xs">
+                    <Check size={14} className="mr-2" />
+                    Resolve
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={onDelete} className="text-xs text-destructive">
+                  <Trash2 size={14} className="mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <p className="mt-1 text-sm">{content}</p>
+          {/* Content */}
+          <p className="mt-2 text-sm text-foreground leading-relaxed">{content}</p>
 
+          {/* Resolved Badge */}
           {isResolved && comment.resolved_by && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Resolved by {comment.resolved_by.name}
-            </p>
+            <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Check size={12} className="text-green-500" />
+              <span>Resolved by {comment.resolved_by.name}</span>
+            </div>
           )}
 
           {/* Reactions */}
           {Object.entries(comment.reactions).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {Object.entries(comment.reactions).map(([emoji, count]) => (
                 <button
                   key={emoji}
-                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-muted/80"
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs hover:bg-muted/80 transition-colors"
                 >
-                  {emoji} {count}
+                  <span>{emoji}</span>
+                  <span className="font-medium text-muted-foreground">{count}</span>
                 </button>
               ))}
             </div>
@@ -260,9 +282,14 @@ function CommentItem({
 
           {/* Reply button */}
           {canComment && !isResolved && (
-            <div className="mt-2 flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onReply}>
-                <CornerDownRight size={12} className="mr-1" />
+            <div className="mt-3 pt-2 border-t border-border/50">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground" 
+                onClick={onReply}
+              >
+                <CornerDownRight size={12} />
                 Reply
               </Button>
             </div>
@@ -295,7 +322,7 @@ export function CommentButton({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-80 rounded-lg border bg-popover p-4 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[340px] rounded-xl border bg-popover shadow-xl overflow-hidden max-h-[70vh] flex flex-col">
           <CommentThread pageId={pageId} canComment canResolve />
         </div>
       )}

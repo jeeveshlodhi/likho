@@ -11,7 +11,7 @@ import { isMac } from '@/utils/platform';
 const TITLEBAR_HEIGHT = 36;
 
 /** Threshold (px) of accumulated horizontal wheel delta to trigger back/forward */
-const SWIPE_THRESHOLD = 120;
+const SWIPE_THRESHOLD = 50;
 /** Reset accumulated delta after this ms of no wheel events */
 const SWIPE_RESET_MS = 200;
 /** Cooldown period (ms) after navigation to prevent multiple triggers from one swipe */

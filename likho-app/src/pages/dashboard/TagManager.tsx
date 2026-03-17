@@ -1,14 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { 
-  Hash, 
-  Search, 
-  Palette, 
-  Trash2, 
-  FileText, 
+import {
+  Hash,
+  Search,
+  Trash2,
+  FileText,
   X,
   Plus,
-  Tag as TagIcon
+  Tag as TagIcon,
+  RefreshCw,
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useLinkStore } from '@/store/linkStore';
@@ -40,11 +40,32 @@ export default function TagManager() {
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
   const [newTagName, setNewTagName] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
+  const [isScanning, setIsScanning] = useState(false);
+
   const notes = useWorkspaceStore((s) => s.notes);
+  const folders = useWorkspaceStore((s) => s.folders);
   const tags = useLinkStore((s) => s.tags);
+  const tagUsages = useLinkStore((s) => s.tagUsages);
   const getNotesForTag = useLinkStore((s) => s.getNotesForTag);
-  const { createTag, updateTag, deleteTag } = useLinkStore();
+  const { createTag, updateTag, deleteTag, scanNoteForLinks } = useLinkStore();
+
+  // On mount: only do a full rescan if the store has no tag-usage data yet.
+  // If tags already exist (scanned by NoteEditorBody when notes were opened,
+  // or from a previous session via persist), trust that data and don't
+  // overwrite it — scanning here uses workspaceStore content which may be
+  // stale or in a different format than editor.document.
+  useEffect(() => {
+    if (!notes.length) return;
+    if (tagUsages.length > 0) return; // already have scan data — skip
+    notes.forEach(note => scanNoteForLinks(note, notes, folders));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRescanAll = () => {
+    setIsScanning(true);
+    notes.forEach(note => scanNoteForLinks(note, notes, folders));
+    setTimeout(() => setIsScanning(false), 600);
+  };
   
   const filteredTags = useMemo(() => {
     if (!searchQuery) return tags;
@@ -98,12 +119,22 @@ export default function TagManager() {
               <TagIcon className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold">Tags</h2>
             </div>
-            <button
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleRescanAll}
+                disabled={isScanning}
+                title="Rescan all notes for tags"
+                className="p-1.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
           </div>
           
           {showCreateForm && (

@@ -9,24 +9,21 @@ interface TopBarProps {
   selectedElements: CanvasElement[];
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1 px-2 border-r border-border last:border-r-0">
-      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-1">{children}</div>
-    </div>
-  );
+function Divider() {
+  return <div className="w-px h-5 bg-border mx-1 flex-shrink-0" />;
 }
 
-function ToggleBtn({
+function Btn({
   active, onClick, title, children,
 }: { active: boolean; onClick: () => void; title: string; children: React.ReactNode }) {
   return (
     <button
       title={title}
       onClick={onClick}
-      className={`px-2 py-1 rounded text-xs transition-all ${
-        active ? 'bg-blue-500 text-white' : 'bg-muted hover:bg-accent text-muted-foreground'
+      className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all flex-shrink-0 ${
+        active
+          ? 'bg-blue-500 text-white'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
       }`}
     >
       {children}
@@ -37,19 +34,22 @@ function ToggleBtn({
 export function TopBar({ appState, onAppStateChange, selectedElements }: TopBarProps) {
   const [openPicker, setOpenPicker] = useState<null | 'stroke' | 'fill'>(null);
 
-  const showTextOpts = selectedElements.some((el) => el.type === 'text') ||
-    appState.tool === 'text';
+  const showTextOpts =
+    selectedElements.some((el) => el.type === 'text') || appState.tool === 'text';
+  const showEdgeOpts =
+    appState.tool === 'rectangle' || selectedElements.some((e) => e.type === 'rectangle');
 
   const set = (patch: Partial<AppState>) => onAppStateChange(patch);
 
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-end bg-background border border-border rounded-xl shadow-lg px-2 py-2 gap-0 max-w-[90vw] overflow-x-auto">
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center bg-background border border-border rounded-xl shadow-md px-2 py-1.5 max-w-[92vw] overflow-x-auto">
 
-      {/* Stroke Color */}
-      <Section label="Stroke">
+      {/* Color swatches */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Stroke color */}
         <div className="relative">
           <button
-            className="w-7 h-7 rounded border-2 border-border flex items-center justify-center"
+            className="w-7 h-7 rounded-lg border-2 border-border shadow-sm flex-shrink-0 hover:scale-105 transition-transform"
             style={{ background: appState.strokeColor }}
             onClick={() => setOpenPicker(openPicker === 'stroke' ? null : 'stroke')}
             title="Stroke color"
@@ -63,20 +63,19 @@ export function TopBar({ appState, onAppStateChange, selectedElements }: TopBarP
             </div>
           )}
         </div>
-      </Section>
 
-      {/* Background Color */}
-      <Section label="Fill">
+        {/* Fill color */}
         <div className="relative">
           <button
-            className="w-7 h-7 rounded border-2 border-border flex items-center justify-center"
+            className="w-7 h-7 rounded-lg border-2 border-border shadow-sm flex-shrink-0 hover:scale-105 transition-transform"
             style={{
-              background: appState.backgroundColor === 'transparent'
-                ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px'
-                : appState.backgroundColor,
+              background:
+                appState.backgroundColor === 'transparent'
+                  ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px'
+                  : appState.backgroundColor,
             }}
             onClick={() => setOpenPicker(openPicker === 'fill' ? null : 'fill')}
-            title="Background color"
+            title="Fill color"
           />
           {openPicker === 'fill' && (
             <div className="absolute top-9 left-0 z-50 bg-background border border-border rounded-xl shadow-xl p-3 w-52">
@@ -88,141 +87,129 @@ export function TopBar({ appState, onAppStateChange, selectedElements }: TopBarP
             </div>
           )}
         </div>
-      </Section>
+      </div>
 
-      {/* Fill Style */}
-      <Section label="Fill Style">
+      <Divider />
+
+      {/* Fill style */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         {(['none', 'hachure', 'solid', 'cross-hatch'] as const).map((fs) => (
-          <ToggleBtn
-            key={fs}
-            active={appState.fillStyle === fs}
-            onClick={() => set({ fillStyle: fs })}
-            title={fs}
-          >
+          <Btn key={fs} active={appState.fillStyle === fs} onClick={() => set({ fillStyle: fs })} title={fs}>
             {fs === 'none' ? '∅' : fs === 'hachure' ? '≡' : fs === 'solid' ? '■' : '#'}
-          </ToggleBtn>
+          </Btn>
         ))}
-      </Section>
+      </div>
 
-      {/* Stroke Width */}
-      <Section label="Width">
+      <Divider />
+
+      {/* Stroke width */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         {([1, 2, 4, 6] as const).map((w) => (
-          <ToggleBtn
-            key={w}
-            active={appState.strokeWidth === w}
-            onClick={() => set({ strokeWidth: w })}
-            title={`${w}px`}
-          >
-            <div
-              className="w-6 bg-current rounded-full"
-              style={{ height: Math.min(w + 1, 5) }}
-            />
-          </ToggleBtn>
+          <Btn key={w} active={appState.strokeWidth === w} onClick={() => set({ strokeWidth: w })} title={`${w}px`}>
+            <div className="w-5 bg-current rounded-full" style={{ height: Math.min(w + 1, 5) }} />
+          </Btn>
         ))}
-      </Section>
+      </div>
 
-      {/* Stroke Style */}
-      <Section label="Stroke">
+      <Divider />
+
+      {/* Stroke style */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         {(['solid', 'dashed', 'dotted'] as const).map((ss) => (
-          <ToggleBtn
-            key={ss}
-            active={appState.strokeStyle === ss}
-            onClick={() => set({ strokeStyle: ss })}
-            title={ss}
-          >
-            {ss === 'solid' ? '—' : ss === 'dashed' ? '- -' : '···'}
-          </ToggleBtn>
+          <Btn key={ss} active={appState.strokeStyle === ss} onClick={() => set({ strokeStyle: ss })} title={ss}>
+            {ss === 'solid' ? '—' : ss === 'dashed' ? '╌' : '···'}
+          </Btn>
         ))}
-      </Section>
+      </div>
+
+      <Divider />
 
       {/* Roughness */}
-      <Section label="Roughness">
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         {([0, 1, 2, 3] as const).map((r) => (
-          <ToggleBtn
-            key={r}
-            active={appState.roughness === r}
-            onClick={() => set({ roughness: r })}
-            title={`Roughness ${r}`}
-          >
-            {r}
-          </ToggleBtn>
+          <Btn key={r} active={appState.roughness === r} onClick={() => set({ roughness: r })} title={`Roughness ${r}`}>
+            <span className="text-xs font-medium">{r}</span>
+          </Btn>
         ))}
-      </Section>
+      </div>
+
+      <Divider />
 
       {/* Opacity */}
-      <Section label="Opacity">
-        <div className="flex items-center gap-1">
-          <input
-            type="range"
-            min={10}
-            max={100}
-            step={5}
-            value={appState.opacity}
-            onChange={(e) => set({ opacity: Number(e.target.value) })}
-            className="w-20 h-1 accent-blue-500"
-          />
-          <span className="text-xs text-muted-foreground w-8">{appState.opacity}%</span>
-        </div>
-      </Section>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <input
+          type="range"
+          min={10}
+          max={100}
+          step={5}
+          value={appState.opacity}
+          onChange={(e) => set({ opacity: Number(e.target.value) })}
+          className="w-16 h-1 accent-blue-500"
+          title="Opacity"
+        />
+        <span className="text-xs text-muted-foreground w-7 text-right tabular-nums">
+          {appState.opacity}%
+        </span>
+      </div>
 
-      {/* Edge Style (rectangles) */}
-      {(appState.tool === 'rectangle' || selectedElements.some((e) => e.type === 'rectangle')) && (
-        <Section label="Edge">
-          <ToggleBtn active={appState.edgeStyle === 'sharp'} onClick={() => set({ edgeStyle: 'sharp' })} title="Sharp edges">
-            ▪
-          </ToggleBtn>
-          <ToggleBtn active={appState.edgeStyle === 'round'} onClick={() => set({ edgeStyle: 'round' })} title="Round edges">
-            ◉
-          </ToggleBtn>
-        </Section>
+      {/* Edge style — only for rectangles */}
+      {showEdgeOpts && (
+        <>
+          <Divider />
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <Btn active={appState.edgeStyle === 'sharp'} onClick={() => set({ edgeStyle: 'sharp' })} title="Sharp edges">
+              ▪
+            </Btn>
+            <Btn active={appState.edgeStyle === 'round'} onClick={() => set({ edgeStyle: 'round' })} title="Round edges">
+              ◉
+            </Btn>
+          </div>
+        </>
       )}
 
-      {/* Text options */}
+      {/* Text options — only for text tool / selected text */}
       {showTextOpts && (
-        <Section label="Text">
-          <select
-            value={appState.fontFamily}
-            onChange={(e) => set({ fontFamily: e.target.value })}
-            className="text-xs bg-muted rounded px-1 py-0.5 border border-border h-6"
-          >
-            <option value="'Virgil', cursive">Virgil</option>
-            <option value="'Segoe UI', sans-serif">Sans</option>
-            <option value="Georgia, serif">Serif</option>
-            <option value="'Courier New', monospace">Mono</option>
-          </select>
-          <input
-            type="number"
-            min={10}
-            max={96}
-            value={appState.fontSize}
-            onChange={(e) => set({ fontSize: Number(e.target.value) })}
-            className="w-12 text-xs bg-muted rounded px-1 py-0.5 border border-border h-6"
-          />
-          {([['left', <AlignLeft size={12} />], ['center', <AlignCenter size={12} />], ['right', <AlignRight size={12} />]] as const).map(([a, icon]) => (
-            <ToggleBtn key={a} active={appState.textAlign === a} onClick={() => set({ textAlign: a })} title={`Align ${a}`}>
-              {icon}
-            </ToggleBtn>
-          ))}
-        </Section>
+        <>
+          <Divider />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <select
+              value={appState.fontFamily}
+              onChange={(e) => set({ fontFamily: e.target.value })}
+              className="text-xs bg-muted rounded-lg px-1.5 border border-border h-7"
+            >
+              <option value="'Virgil', cursive">Virgil</option>
+              <option value="'Segoe UI', sans-serif">Sans</option>
+              <option value="Georgia, serif">Serif</option>
+              <option value="'Courier New', monospace">Mono</option>
+            </select>
+            <input
+              type="number"
+              min={10}
+              max={96}
+              value={appState.fontSize}
+              onChange={(e) => set({ fontSize: Number(e.target.value) })}
+              className="w-11 text-xs bg-muted rounded-lg px-1.5 border border-border h-7"
+            />
+            {(['left', 'center', 'right'] as const).map((a) => (
+              <Btn key={a} active={appState.textAlign === a} onClick={() => set({ textAlign: a })} title={`Align ${a}`}>
+                {a === 'left' ? <AlignLeft size={12} /> : a === 'center' ? <AlignCenter size={12} /> : <AlignRight size={12} />}
+              </Btn>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Grid toggle */}
-      <Section label="Grid">
-        <ToggleBtn
-          active={appState.showGrid}
-          onClick={() => set({ showGrid: !appState.showGrid })}
-          title="Toggle grid"
-        >
-          <Grid size={14} />
-        </ToggleBtn>
-        <ToggleBtn
-          active={appState.snapToGrid}
-          onClick={() => set({ snapToGrid: !appState.snapToGrid })}
-          title="Snap to grid"
-        >
+      <Divider />
+
+      {/* Grid controls */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <Btn active={appState.showGrid} onClick={() => set({ showGrid: !appState.showGrid })} title="Toggle grid">
+          <Grid size={13} />
+        </Btn>
+        <Btn active={appState.snapToGrid} onClick={() => set({ snapToGrid: !appState.snapToGrid })} title="Snap to grid">
           ⊹
-        </ToggleBtn>
-      </Section>
+        </Btn>
+      </div>
     </div>
   );
 }
