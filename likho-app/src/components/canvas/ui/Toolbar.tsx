@@ -29,6 +29,8 @@ const TOOLS: Tool[] = [
 
 const ZOOM_STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
+const DRAWING_TOOLS: ToolType[] = ['rectangle', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'image', 'eraser'];
+
 interface ToolbarProps {
   appState: AppState;
   onAppStateChange: (patch: Partial<AppState>) => void;
@@ -68,8 +70,19 @@ export function Toolbar({
     onZoom(prev ?? 0.1);
   };
 
+  const isDrawingMode = DRAWING_TOOLS.includes(appState.tool);
+
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-background border border-border rounded-2xl shadow-lg px-2 py-1.5">
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5">
+      {/* Drawing mode hint */}
+      {isDrawingMode && (
+        <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-400 rounded-lg px-2.5 py-1 text-[10px] font-medium shadow-sm">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          Click and drag to draw · Auto-returns to select · <kbd className="font-mono bg-blue-500/10 px-1 rounded">Esc</kbd> to cancel
+        </div>
+      )}
+
+      <div className="flex items-center gap-0.5 bg-background border border-border rounded-2xl shadow-lg px-2 py-1.5">
 
       {/* Drawing tools */}
       {TOOLS.map(({ id, label, key, Icon }) => (
@@ -80,7 +93,7 @@ export function Toolbar({
           className={`
             w-8 h-8 rounded-lg flex items-center justify-center transition-all
             ${appState.tool === id
-              ? 'bg-blue-500 text-white shadow-sm'
+              ? 'bg-blue-500 text-white shadow-sm ring-2 ring-blue-300/50 ring-offset-1'
               : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }
           `}
@@ -151,6 +164,7 @@ export function Toolbar({
       >
         <Trash2 size={15} />
       </button>
+    </div>
     </div>
   );
 }

@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { useSignUp } from '@/hooks/useAuth';
+import { useSignUp, useSignIn } from '@/hooks/useAuth';
 import { FormInput } from '@/components/forms/FormInput';
 import { Button } from '@/components/forms/Button';
 import { Alert } from '@/components/forms/Alert';
 import { SignUpRequest } from '@/types/auth';
 import { Sparkles, ArrowLeft, FileText, LayoutGrid, Palette, CheckCircle2 } from 'lucide-react';
+import { useOnboardingWizardStore } from '@/store/onboardingWizardStore';
 
 interface FormInputs extends SignUpRequest {
     confirm_password: string;
@@ -17,7 +18,10 @@ const SignUp = () => {
     const navigate = useNavigate();
     const [serverError, setServerError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const { mutate: signUp, isPending } = useSignUp();
+    const { mutate: signUp, isPending: isSigningUp } = useSignUp();
+    const { mutate: signIn, isPending: isSigningIn } = useSignIn();
+    const updateOnboardingData = useOnboardingWizardStore((s) => s.updateData);
+    const isPending = isSigningUp || isSigningIn;
 
     const {
         register,
@@ -43,10 +47,22 @@ const SignUp = () => {
 
         signUp(submitData, {
             onSuccess: () => {
-                setSuccessMessage('Account created successfully! Redirecting...');
-                setTimeout(() => {
-                    navigate('/auth/sign-in');
-                }, 1500);
+                setSuccessMessage('Account created! Setting up your workspace…');
+                // Pre-fill name in onboarding wizard
+                if (submitData.full_name) {
+                    updateOnboardingData({ full_name: submitData.full_name });
+                }
+                // Auto sign-in to get tokens, then redirect to onboarding
+                signIn(
+                    { email: submitData.email, password: submitData.password },
+                    {
+                        onSuccess: () => navigate('/onboarding', { replace: true }),
+                        onError: () => {
+                            // Sign-in failed — fall back to manual sign-in
+                            setTimeout(() => navigate('/auth/sign-in'), 1000);
+                        },
+                    }
+                );
             },
             onError: (error) => {
                 const errorMessage =

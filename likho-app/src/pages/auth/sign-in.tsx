@@ -25,8 +25,13 @@ const SignIn = () => {
     const onSubmit = (data: SignInRequest) => {
         setServerError(null);
         signIn(data, {
-            onSuccess: () => {
-                navigate('/dashboard');
+            onSuccess: (res) => {
+                // New users (onboarded_at is null) go through the onboarding wizard
+                if (!res.user.onboarded_at) {
+                    navigate('/onboarding', { replace: true });
+                } else {
+                    navigate('/dashboard', { replace: true });
+                }
             },
             onError: (error) => {
                 const errorMessage =

@@ -56,7 +56,7 @@ import { useEffect } from 'react';
 
 // Get Current User Hook
 export const useCurrentUser = () => {
-  const { setUser } = useAuthStore();
+  const { setUser, user, reset } = useAuthStore();
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const query = useQuery<UserResponse, AxiosError<ApiError>>({
@@ -65,16 +65,27 @@ export const useCurrentUser = () => {
       const response = await api.get<UserResponse>('/auth/me');
       return response.data;
     },
+    // Only fetch when we have a token
     enabled: !!accessToken,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    // No stale delay when user is missing — fetch immediately.
+    // Once we have user data, treat it as fresh for 5 minutes.
+    staleTime: user ? 1000 * 60 * 5 : 0,
     retry: 1,
   });
 
+  // Populate store whenever fresh data arrives
   useEffect(() => {
     if (query.data) {
       setUser(query.data);
     }
   }, [query.data, setUser]);
+
+  // Token expired or invalid — wipe auth state so the user gets redirected to sign-in
+  useEffect(() => {
+    if (query.error?.response?.status === 401) {
+      reset();
+    }
+  }, [query.error, reset]);
 
   return query;
 };

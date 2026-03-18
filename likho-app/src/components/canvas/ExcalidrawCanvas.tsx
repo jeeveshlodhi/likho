@@ -21,7 +21,6 @@ import { copyElements, pasteElements, duplicateElements } from './utils/clipboar
 import { useHistory } from './hooks/useHistory';
 
 import { Toolbar } from './ui/Toolbar';
-import { TopBar } from './ui/TopBar';
 import { PropertiesPanel } from './ui/PropertiesPanel';
 import { ExportModal } from './ui/ExportModal';
 
@@ -94,17 +93,19 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Core state (with history)
-  const [elements, setElements, undo, redo, canUndo, canRedo] = useHistory<CanvasElement[]>(
-    initialData.elements ?? []
-  );
+  const [elements, setElements, setElementsLive, commitElements, undo, redo, canUndo, canRedo] =
+    useHistory<CanvasElement[]>(initialData.elements ?? []);
   const [camera, setCamera] = useState<CameraState>(initialData.camera ?? { x: 0, y: 0, zoom: 1 });
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextPos, setEditingTextPos] = useState<{ screenX: number; screenY: number; width: number; height: number } | null>(null);
   const [cursor, setCursor] = useState<Point>({ x: 0, y: 0 });
+  const [screenCursor, setScreenCursor] = useState<Point>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const clipboardRef = useRef<CanvasElement[]>([]);
+  const textCreatedWithToolRef = useRef(false);
 
   // ── Mutable refs (for event handlers without stale closures)
   const elementsRef = useRef(elements);
@@ -231,7 +232,12 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
     );
     setEditingTextId(null);
     setEditingTextPos(null);
-  }, [editingTextId, setElements]);
+    // auto-switch back to select after creating/editing text via text tool
+    if (textCreatedWithToolRef.current) {
+      textCreatedWithToolRef.current = false;
+      setAppStatePatch({ tool: 'select' });
+    }
+  }, [editingTextId, setElements, setAppStatePatch]);
 
   // ── Image tool ────────────────────────────────────────────────────────────────
 
@@ -386,12 +392,14 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
     // Middle mouse or space+drag → pan
     if (e.button === 1 || (spaceHeldRef.current && tool !== 'hand')) {
       interactionRef.current = { type: 'panning', startScreen: { x: screenX, y: screenY }, origCamera: { ...cam } };
+      setIsPanning(true);
       renderFrame();
       return;
     }
 
     if (tool === 'hand') {
       interactionRef.current = { type: 'panning', startScreen: { x: screenX, y: screenY }, origCamera: { ...cam } };
+      setIsPanning(true);
       renderFrame();
       return;
     }
@@ -401,7 +409,8 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
       const hit = [...elementsRef.current].reverse().find((el) => hitTestElement(el, worldPt, cam.zoom));
       if (hit) {
         (interactionRef.current as Extract<InteractionState, { type: 'erasing' }>).erasedIds.add(hit.id);
-        setElements((prev) => prev.filter((e) => e.id !== hit.id));
+        // Use setLive so the whole erase stroke is one commit on mouseup
+        setElementsLive((prev) => prev.filter((e) => e.id !== hit.id));
       }
       return;
     }
@@ -485,12 +494,17 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
       const hit = [...elementsRef.current].reverse().find(
         (el) => el.type === 'text' && hitTestElement(el, worldPt, cam.zoom)
       );
-      if (hit) { startEditingText(hit.id); return; }
+      if (hit) {
+        textCreatedWithToolRef.current = false;
+        startEditingText(hit.id);
+        return;
+      }
 
       // Create new text element
       const el = createNewElement('text', snappedPt.x, snappedPt.y, appStateRef.current);
       setElements((prev) => [...prev, el]);
       setSelectedIds(new Set([el.id]));
+      textCreatedWithToolRef.current = true;
       // Start editing it right away
       setTimeout(() => startEditingText(el.id), 10);
       return;
@@ -498,6 +512,8 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
 
     if (tool === 'image') {
       placeImage(snappedPt.x, snappedPt.y);
+      // switch back to select immediately (file dialog opens async)
+      setAppStatePatch({ tool: 'select' });
       return;
     }
 
@@ -513,7 +529,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
     const el = createNewElement(tool as any, snappedPt.x, snappedPt.y, appStateRef.current);
     interactionRef.current = { type: 'drawing', element: el, startWorld: snappedPt };
     renderFrame();
-  }, [getCanvasPoint, setElements, setSelectedIds, startEditingText, placeImage, renderFrame]);
+  }, [getCanvasPoint, setElements, setElementsLive, setSelectedIds, startEditingText, placeImage, setAppStatePatch, renderFrame]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { screenX, screenY } = getCanvasPoint(e);
@@ -523,6 +539,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
     const snapped: Point = doSnap ? { x: snap(worldPt.x, gridSize), y: snap(worldPt.y, gridSize) } : worldPt;
 
     setCursor(worldPt);
+    setScreenCursor({ x: screenX, y: screenY });
 
     const inter = interactionRef.current;
 
@@ -573,7 +590,8 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         const dx = snapped.x - startWorld.x;
         const dy = snapped.y - startWorld.y;
         const ids = selectedIdsRef.current;
-        setElements((prev) =>
+        // setLive: no history entry per pixel — commit() on mouseup seals one entry
+        setElementsLive((prev) =>
           prev.map((el) => {
             if (!ids.has(el.id)) return el;
             const orig = origPositions.get(el.id);
@@ -589,7 +607,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         const dx = snapped.x - startWorld.x;
         const dy = snapped.y - startWorld.y;
         const result = applyResize(origElement, handle, { x: dx, y: dy }, shiftHeldRef.current);
-        setElements((prev) =>
+        setElementsLive((prev) =>
           prev.map((el) => (el.id === elementId ? { ...el, ...result } : el))
         );
         break;
@@ -598,7 +616,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
       case 'rotating': {
         const { elementId, centerWorld, startAngle, origAngle } = inter;
         const newAngle = applyRotation(centerWorld, { x: screenX, y: screenY }, cam, origAngle, startAngle);
-        setElements((prev) =>
+        setElementsLive((prev) =>
           prev.map((el) => (el.id === elementId ? { ...el, angle: newAngle } : el))
         );
         break;
@@ -616,15 +634,30 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         );
         if (hit) {
           inter.erasedIds.add(hit.id);
-          setElements((prev) => prev.filter((e) => e.id !== hit.id));
+          // setLive during stroke — one history entry on mouseup via commit()
+          setElementsLive((prev) => prev.filter((e) => e.id !== hit.id));
         }
         break;
       }
     }
-  }, [getCanvasPoint, setCamera, setElements, renderFrame]);
+  }, [getCanvasPoint, setCamera, setElements, setElementsLive, renderFrame]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const inter = interactionRef.current;
+
+    if (inter.type === 'panning') {
+      setIsPanning(false);
+    }
+
+    // Commit continuous interactions — seal the draft into one history entry
+    if (
+      inter.type === 'moving' ||
+      inter.type === 'resizing' ||
+      inter.type === 'rotating' ||
+      inter.type === 'erasing'
+    ) {
+      commitElements();
+    }
 
     if (inter.type === 'drawing') {
       const el = inter.element;
@@ -637,12 +670,16 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         setElements((prev) => [...prev, el]);
         setSelectedIds(new Set([el.id]));
       }
+      // Always switch back to select after drawing to prevent accidental repeated draws
+      setAppStatePatch({ tool: 'select' });
     } else if (inter.type === 'pen') {
       const el = inter.element;
       if (el.points && el.points.length > 2) {
         setElements((prev) => [...prev, el]);
         setSelectedIds(new Set([el.id]));
       }
+      // Switch back to select after free-draw stroke
+      setAppStatePatch({ tool: 'select' });
     } else if (inter.type === 'selecting') {
       const box = normalizeRect(inter.startWorld.x, inter.startWorld.y, inter.currentWorld.x, inter.currentWorld.y);
       if (box.width > 3 || box.height > 3) {
@@ -657,7 +694,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
 
     interactionRef.current = { type: 'idle' };
     renderFrame();
-  }, [getCanvasPoint, setElements, setSelectedIds, renderFrame]);
+  }, [getCanvasPoint, setElements, setSelectedIds, setAppStatePatch, commitElements, renderFrame]);
 
   const handleDblClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { screenX, screenY } = getCanvasPoint(e);
@@ -665,15 +702,17 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
     const worldPt = screenToWorld(screenX, screenY, cam);
     const hit = [...elementsRef.current].reverse().find((el) => hitTestElement(el, worldPt, cam.zoom));
     if (hit?.type === 'text') {
+      textCreatedWithToolRef.current = false; // editing existing text, don't switch tool
       startEditingText(hit.id);
     } else if (hit) {
       // Double-click on non-text: select
       setSelectedIds(new Set([hit.id]));
     } else {
-      // Double click empty → text tool
+      // Double click empty → create text and switch back to select when done
       const el = createNewElement('text', worldPt.x, worldPt.y, appStateRef.current);
       setElements((prev) => [...prev, el]);
       setSelectedIds(new Set([el.id]));
+      textCreatedWithToolRef.current = true;
       setTimeout(() => startEditingText(el.id), 10);
     }
   }, [getCanvasPoint, setElements, setSelectedIds, startEditingText]);
@@ -894,15 +933,15 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
   // ── Cursor style ──────────────────────────────────────────────────────────
 
   const cursorStyle = useMemo(() => {
-    const inter = interactionRef.current;
+    if (isPanning) return 'grabbing';
     const { tool } = appState;
-    if (inter.type === 'panning') return 'grabbing';
     if (tool === 'hand') return 'grab';
     if (tool === 'eraser') return 'cell';
     if (tool === 'text') return 'text';
     if (tool === 'select') return 'default';
+    // drawing tools: rectangle, ellipse, diamond, arrow, line, pen, image
     return 'crosshair';
-  }, [appState.tool]);
+  }, [appState.tool, isPanning]);
 
   // ── Import ────────────────────────────────────────────────────────────────
 
@@ -953,6 +992,23 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         onContextMenu={(e) => e.preventDefault()}
       />
 
+      {/* Floating tool label — shown when a drawing tool is active */}
+      {['rectangle', 'ellipse', 'diamond', 'arrow', 'line', 'pen', 'image', 'eraser'].includes(appState.tool) && (
+        <div
+          style={{
+            position: 'absolute',
+            left: screenCursor.x + 16,
+            top: screenCursor.y + 6,
+            pointerEvents: 'none',
+            zIndex: 50,
+            userSelect: 'none',
+          }}
+          className="text-[10px] font-medium capitalize bg-blue-500/90 text-white rounded px-1.5 py-0.5 shadow-sm"
+        >
+          {appState.tool === 'pen' ? 'free draw' : appState.tool}
+        </div>
+      )}
+
       {/* Text editor overlay */}
       {editingTextId && editingTextPos && (() => {
         const el = elements.find((e) => e.id === editingTextId);
@@ -1001,14 +1057,7 @@ export default function ExcalidrawCanvas({ initialData, onChange, theme = 'light
         onZoomFit={zoomToFit}
       />
 
-      {/* Top style bar */}
-      <TopBar
-        appState={appState}
-        onAppStateChange={setAppStatePatch}
-        selectedElements={selectedElements}
-      />
-
-      {/* Properties panel */}
+      {/* Detailed properties panel (right sidebar — position, size, alignment) */}
       <PropertiesPanel
         selectedElements={selectedElements}
         allElements={elements}

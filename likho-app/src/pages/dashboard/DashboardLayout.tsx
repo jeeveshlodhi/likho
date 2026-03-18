@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '@/store/workspaceStore';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { useOnlineSync } from '@/hooks/useOnlineSync';
 import { AppShortcuts } from '@/components/search';
+import { useCurrentUser } from '@/hooks/useAuth';
 
 export default function DashboardLayout() {
   const { sidebarCollapsed, sidebarWidth, setSidebarWidth } = useWorkspaceStore();
@@ -11,6 +12,9 @@ export default function DashboardLayout() {
 
   // Sync online pages from backend on mount (authenticated users only)
   useOnlineSync();
+
+  // Keep user profile in sync (hydrates from /auth/me on mount and after token restore)
+  useCurrentUser();
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router';
+import { Link, Navigate } from 'react-router';
 import { ArrowRight, Sparkles, FileText, LayoutGrid, Palette } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router';
@@ -7,6 +7,12 @@ import { useNavigate } from 'react-router';
 const TauriWelcome = () => {
   const navigate = useNavigate();
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
+  const { isAuthenticated, accessToken, isGuest } = useAuthStore();
+
+  // Already logged in (or guest) — skip welcome screen entirely
+  if ((isAuthenticated && accessToken) || isGuest) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleGuestAccess = () => {
     continueAsGuest();

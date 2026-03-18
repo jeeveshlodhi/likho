@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Share2, Clock, Plus, MessageSquare, Users, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Share2, Clock, Plus, MessageSquare, Users, Sparkles, FolderOpen, Activity, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LinkHoverCard } from '@/components/editor/LinkHoverCard';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/shadcn';
 import { getDefaultReactSlashMenuItems, SuggestionMenuController } from '@blocknote/react';
@@ -50,6 +51,7 @@ export function NoteEditorBody({
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
   const { theme } = useTheme();
   const { setNoteContext } = useAiChatStore();
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
   const editor = useCreateBlockNote({
     schema: noteEditorSchema,
@@ -308,7 +310,7 @@ export function NoteEditorBody({
             <div className="px-4 sm:px-8">
               <NoteTitleInput note={note} />
             </div>
-            <div className="flex-1 min-h-0 mt-4 px-4 sm:px-8 pb-24 relative">
+            <div ref={editorContainerRef} data-editor-container className="flex-1 min-h-0 mt-4 px-4 sm:px-8 pb-24 relative">
               {isReadOnly && (
                 <div className="absolute inset-0 z-10 bg-background/50 pointer-events-none" />
               )}
@@ -365,6 +367,8 @@ export function NoteEditorBody({
                 position={suggestionPosition}
               />
             </div>
+            {/* Intercept all link clicks — show hover card instead of navigating */}
+            <LinkHoverCard containerRef={editorContainerRef} />
           </div>
         </div>
 

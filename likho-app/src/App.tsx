@@ -5,6 +5,7 @@ import Welcome from "@/pages/landing/welcome";
 import DownloadPage from "@/pages/landing/DownloadPage";
 import SignIn from "@/pages/auth/sign-in";
 import SignUp from "@/pages/auth/sign-up";
+import OnboardingWizard from "@/pages/onboarding/OnboardingWizard";
 import DashboardLayout from "@/pages/dashboard/DashboardLayout";
 import DashboardHome from "@/pages/dashboard/DashboardHome";
 import FolderIndex from "@/pages/dashboard/FolderIndex";
@@ -39,6 +40,7 @@ function App() {
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/auth/sign-in" element={<SignIn />} />
       <Route path="/auth/sign-up" element={<SignUp />} />
+      <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/shared/:token" element={<SharedPageView />} />
       <Route path="/dashboard" element={
         <AuthGuard>

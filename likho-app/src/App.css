@@ -163,6 +163,20 @@
 
 /* ─── Reduced Motion ─── */
 .reduce-motion,
+/* ─── Editor link behaviour: hover-to-open, no direct navigation ─── */
+/* Scope to the editor container so links outside (nav, sidebar) are unaffected */
+[data-editor-container] a[href] {
+  /* Keep underline styling but change cursor to hint at hover interaction */
+  cursor: default;
+  user-select: text;
+}
+
+[data-editor-container] a[href]:hover {
+  /* Subtle background tint on hover so users know something will appear */
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-radius: 2px;
+}
+
 .reduce-motion *,
 .reduce-motion *::before,
 .reduce-motion *::after {

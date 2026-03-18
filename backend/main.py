@@ -27,6 +27,7 @@ from app.modules.remote_config import models as _remote_config_models  # noqa: F
 from app.modules.feedback import models as _feedback_models  # noqa: F401 — register model
 from app.modules.notifications import models as _notifications_models  # noqa: F401 — register model
 from app.modules.feedback.router import router as feedback_router
+from app.modules.onboarding.router import router as onboarding_router
 from app.api.routes import health as health_router
 
 # Create database tables
@@ -93,6 +94,7 @@ app.include_router(remote_config_public_router, prefix=f"{settings.API_V1_STR}",
 app.include_router(remote_config_admin_router, prefix=f"{settings.API_V1_STR}", tags=["remote-config-admin"])
 app.include_router(feedback_router, prefix=f"{settings.API_V1_STR}", tags=["feedback"])
 app.include_router(notifications_router, prefix=f"{settings.API_V1_STR}", tags=["notifications"])
+app.include_router(onboarding_router, prefix=f"{settings.API_V1_STR}/onboarding", tags=["onboarding"])
 app.include_router(health_router.router, tags=["health"])
 
 

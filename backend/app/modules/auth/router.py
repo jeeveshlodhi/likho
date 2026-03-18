@@ -8,6 +8,7 @@ from app.dependencies.rate_limit import rate_limit_auth, rate_limit_authenticate
 from app.modules.auth.schemas import AuthUser, LoginRequest, RegisterRequest, TokenResponse
 from app.modules.users.models import User
 from app.modules.users import crud
+from app.modules.users.schemas import SignInResponse, UserResponse as FullUserResponse
 
 router = APIRouter()
 
@@ -46,9 +47,9 @@ def signup(
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=SignInResponse)
 def login(
-    body: LoginRequest, 
+    body: LoginRequest,
     db: Session = Depends(get_db),
     _: None = Depends(rate_limit_auth)
 ):
@@ -62,8 +63,11 @@ def login(
         )
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled.")
-    token = create_access_token(data={"sub": str(user.id)})
-    return TokenResponse(access_token=token)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return SignInResponse(
+        user=FullUserResponse.model_validate(user),
+        access_token=access_token,
+    )
 
 
 @router.get("/me", response_model=AuthUser)
