@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { isTauri } from '@/utils/platform';
 import TauriWelcome from '@/components/landing/TauriWelcome';
 import Navbar from '@/components/landing/Navbar';
@@ -14,10 +15,12 @@ import FinalCTA from '@/components/landing/FinalCTA';
 import Footer from '@/components/landing/Footer';
 
 const Welcome = () => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Tauri (desktop app) gets a simple, focused welcome screen
   if (isTauri()) {
     return (
-      <div className="h-full overflow-hidden bg-background">
+      <div className="h-full overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
         <TauriWelcome />
       </div>
     );
@@ -25,8 +28,8 @@ const Welcome = () => {
 
   // Browser gets the full landing page with all sections
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden bg-background scroll-smooth">
-      <Navbar />
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto overflow-x-hidden scroll-smooth" style={{ backgroundColor: '#ffffff' }}>
+      <Navbar scrollContainerRef={scrollContainerRef} />
       <main>
         <Hero />
         <Problem />

@@ -3,8 +3,11 @@ import "./App.css";
 import { Routes, Route } from "react-router";
 import Welcome from "@/pages/landing/welcome";
 import DownloadPage from "@/pages/landing/DownloadPage";
+import Pricing from "@/pages/landing/Pricing";
 import SignIn from "@/pages/auth/sign-in";
 import SignUp from "@/pages/auth/sign-up";
+import ForgotPassword from "@/pages/auth/forgot-password";
+import ResetPassword from "@/pages/auth/reset-password";
 import OnboardingWizard from "@/pages/onboarding/OnboardingWizard";
 import DashboardLayout from "@/pages/dashboard/DashboardLayout";
 import DashboardHome from "@/pages/dashboard/DashboardHome";
@@ -38,8 +41,11 @@ function App() {
     <Routes>
       <Route path="/" element={<Welcome />} />
       <Route path="/download" element={<DownloadPage />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/auth/sign-in" element={<SignIn />} />
       <Route path="/auth/sign-up" element={<SignUp />} />
+      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+      <Route path="/auth/reset-password" element={<ResetPassword />} />
       <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/shared/:token" element={<SharedPageView />} />
       <Route path="/dashboard" element={

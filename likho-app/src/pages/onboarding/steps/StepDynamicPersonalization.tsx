@@ -29,11 +29,27 @@ const ToggleChip = ({
   <button
     type="button"
     onClick={onClick}
-    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all
-      ${selected
-        ? 'bg-indigo-500/15 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
-        : 'bg-surface border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
-      }`}
+    className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+    style={{
+      border: selected ? '1px solid #c7d2fe' : '1px solid #e4e4e7',
+      backgroundColor: selected ? '#eef2ff' : '#fafafa',
+      color: selected ? '#3730a3' : '#71717a',
+      boxShadow: selected ? '0 0 0 3px rgba(99,102,241,0.08)' : 'none',
+    }}
+    onMouseEnter={(e) => {
+      if (!selected) {
+        e.currentTarget.style.backgroundColor = '#f4f4f5';
+        e.currentTarget.style.borderColor = '#d4d4d8';
+        e.currentTarget.style.color = '#3f3f46';
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (!selected) {
+        e.currentTarget.style.backgroundColor = '#fafafa';
+        e.currentTarget.style.borderColor = '#e4e4e7';
+        e.currentTarget.style.color = '#71717a';
+      }
+    }}
   >
     {label}
   </button>
@@ -65,16 +81,15 @@ const StepDynamicPersonalization = () => {
 
   return (
     <StepShell
-      icon={<Sliders className="w-6 h-6 text-indigo-400" />}
+      icon={<Sliders className="w-5 h-5" style={{ color: '#6366f1' }} />}
       title="A couple more questions"
       subtitle="Help us tune your workspace even further"
       onSkip={onSkip}
     >
-      <div className="space-y-7">
-        {/* Dev-specific question */}
+      <div className="space-y-6">
         {isDev && (
           <div>
-            <p className="text-sm font-medium text-foreground mb-3">
+            <p className="text-sm font-semibold mb-3" style={{ color: '#09090b' }}>
               Which development activities matter most?
             </p>
             <div className="flex flex-wrap gap-2">
@@ -90,10 +105,9 @@ const StepDynamicPersonalization = () => {
           </div>
         )}
 
-        {/* Team-specific question */}
         {isTeam && (
           <div>
-            <p className="text-sm font-medium text-foreground mb-3">
+            <p className="text-sm font-semibold mb-3" style={{ color: '#09090b' }}>
               How large is your team?
             </p>
             <div className="flex flex-wrap gap-2">
@@ -113,7 +127,10 @@ const StepDynamicPersonalization = () => {
       <button
         type="button"
         onClick={onNext}
-        className="w-full mt-6 py-2.5 rounded-xl bg-foreground text-background font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+        className="w-full mt-6 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+        style={{ backgroundColor: '#09090b', color: '#fafafa' }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
       >
         Continue
         <ChevronRight className="w-4 h-4" />

@@ -1,0 +1,69 @@
+---
+title: Notes
+description: The Likho block editor — headings, toggles, code blocks, embeds, wikilinks, and more.
+---
+
+## Overview
+
+Likho's note editor is built on [BlockNote](https://www.blocknotejs.org/), an open-source block editor. Every piece of content is a **block** that you can insert, move, and transform.
+
+## Inserting blocks
+
+Type `/` to open the command palette and choose a block type:
+
+| Block | Shortcut |
+| --- | --- |
+| Heading 1 | `/h1` |
+| Heading 2 | `/h2` |
+| Bulleted list | `/ul` |
+| Numbered list | `/ol` |
+| Checklist | `/todo` |
+| Toggle | `/toggle` |
+| Code block | `/code` |
+| Quote | `/quote` |
+| Divider | `/divider` |
+| Image | `/image` |
+
+## Wikilinks
+
+Link between notes using double-bracket syntax:
+
+```
+[[Note title]]
+```
+
+As you type, Likho shows an autocomplete list of your existing notes. Click a wikilink to navigate directly to that note. Backlinks are automatically tracked and shown in the **Backlinks** sidebar tab.
+
+## Tags
+
+Inline tagging with `#`:
+
+```
+Meeting with #product team on #roadmap
+```
+
+Tags are aggregated in the **Tags** dashboard and can be used to filter and search across your workspace.
+
+## Page types
+
+Each page has a **type** that determines which AI features are available:
+
+| Type | AI features |
+| --- | --- |
+| `note` | Writing assist, auto-tags, link suggestions |
+| `meeting` | Meeting intelligence (action items, decisions, attendees) |
+| `journal` | Journal insights (themes, sentiment, reflection prompts) |
+| `project` | Link suggestions, writing assist |
+| `kanban` | (board-level AI coming soon) |
+| `canvas` | (visual AI coming soon) |
+
+## Exporting
+
+Go to **⋯ → Export** on any note to export as:
+- Markdown
+- PDF
+- HTML
+
+## Collaboration
+
+Real-time collaborative editing is available on all plans. Share a note via **Share → Anyone with link → Editor** to invite collaborators without requiring a Likho account.

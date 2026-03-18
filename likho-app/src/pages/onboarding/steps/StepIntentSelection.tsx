@@ -8,7 +8,8 @@ interface IntentOption {
   label: string;
   description: string;
   icon: React.ReactNode;
-  color: string;
+  iconColor: string;
+  iconBg: string;
 }
 
 const INTENTS: IntentOption[] = [
@@ -16,36 +17,41 @@ const INTENTS: IntentOption[] = [
     id: 'notes',
     label: 'Notes / Second Brain',
     description: 'Capture ideas, journal, manage knowledge',
-    icon: <BookOpen className="w-5 h-5" />,
-    color: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    icon: <BookOpen className="w-4.5 h-4.5" />,
+    iconColor: '#3b82f6',
+    iconBg: '#eff6ff',
   },
   {
     id: 'development',
     label: 'Development / Projects',
     description: 'Track tasks, docs, and code projects',
-    icon: <Code2 className="w-5 h-5" />,
-    color: 'text-green-400 bg-green-500/10 border-green-500/20',
+    icon: <Code2 className="w-4.5 h-4.5" />,
+    iconColor: '#22c55e',
+    iconBg: '#f0fdf4',
   },
   {
     id: 'study',
     label: 'Study / Learning',
     description: 'Organize courses, notes, and flashcards',
-    icon: <GraduationCap className="w-5 h-5" />,
-    color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+    icon: <GraduationCap className="w-4.5 h-4.5" />,
+    iconColor: '#f59e0b',
+    iconBg: '#fffbeb',
   },
   {
     id: 'team',
     label: 'Team Collaboration',
     description: 'Shared workspaces, meetings, and docs',
-    icon: <Users className="w-5 h-5" />,
-    color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    icon: <Users className="w-4.5 h-4.5" />,
+    iconColor: '#8b5cf6',
+    iconBg: '#f5f3ff',
   },
   {
     id: 'templates',
     label: 'Templates / Systems',
     description: 'Build reusable structures and workflows',
-    icon: <LayoutTemplate className="w-5 h-5" />,
-    color: 'text-pink-400 bg-pink-500/10 border-pink-500/20',
+    icon: <LayoutTemplate className="w-4.5 h-4.5" />,
+    iconColor: '#ec4899',
+    iconBg: '#fdf2f8',
   },
 ];
 
@@ -75,7 +81,7 @@ const StepIntentSelection = () => {
       subtitle="Select everything that applies — we'll personalise your workspace"
       onSkip={onSkip}
     >
-      <div className="space-y-2.5 mb-6">
+      <div className="space-y-2 mb-6">
         {INTENTS.map((intent) => {
           const isSelected = selected.includes(intent.id);
           return (
@@ -83,27 +89,46 @@ const StepIntentSelection = () => {
               key={intent.id}
               type="button"
               onClick={() => toggle(intent.id)}
-              className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border transition-all text-left
-                ${isSelected
-                  ? 'border-indigo-500/50 bg-indigo-500/10 ring-1 ring-indigo-500/30'
-                  : 'border-border/40 bg-surface/50 hover:border-border hover:bg-accent/30'
-                }`}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-xl text-left transition-all"
+              style={{
+                border: isSelected ? '1px solid #c7d2fe' : '1px solid #e4e4e7',
+                backgroundColor: isSelected ? '#eef2ff' : '#fafafa',
+                boxShadow: isSelected ? '0 0 0 3px rgba(99,102,241,0.08)' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#f4f4f5';
+                  e.currentTarget.style.borderColor = '#d4d4d8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#fafafa';
+                  e.currentTarget.style.borderColor = '#e4e4e7';
+                }
+              }}
             >
-              {/* Icon badge */}
-              <div className={`w-9 h-9 rounded-lg border flex-shrink-0 flex items-center justify-center ${intent.color}`}>
+              {/* Icon */}
+              <div
+                className="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center"
+                style={{ backgroundColor: intent.iconBg, color: intent.iconColor }}
+              >
                 {intent.icon}
               </div>
 
               {/* Text */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{intent.label}</p>
-                <p className="text-xs text-muted-foreground truncate">{intent.description}</p>
+                <p className="text-sm font-semibold" style={{ color: '#09090b' }}>{intent.label}</p>
+                <p className="text-xs truncate" style={{ color: '#71717a' }}>{intent.description}</p>
               </div>
 
               {/* Checkmark */}
               <div
-                className={`w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-all
-                  ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-border/50'}`}
+                className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                style={{
+                  backgroundColor: isSelected ? '#6366f1' : 'transparent',
+                  border: isSelected ? '1px solid #6366f1' : '1px solid #d4d4d8',
+                }}
               >
                 {isSelected && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
@@ -120,7 +145,12 @@ const StepIntentSelection = () => {
         type="button"
         onClick={onNext}
         disabled={selected.length === 0}
-        className="w-full py-2.5 rounded-xl bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+        style={{
+          backgroundColor: selected.length === 0 ? '#e4e4e7' : '#09090b',
+          color: selected.length === 0 ? '#a1a1aa' : '#fafafa',
+          cursor: selected.length === 0 ? 'not-allowed' : 'pointer',
+        }}
       >
         Continue
         <ChevronRight className="w-4 h-4" />

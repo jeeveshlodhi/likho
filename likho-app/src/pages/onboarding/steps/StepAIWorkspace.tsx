@@ -49,7 +49,7 @@ const StepAIWorkspace = () => {
 
   return (
     <StepShell
-      icon={<Sparkles className="w-6 h-6 text-emerald-400" />}
+      icon={<Sparkles className="w-5 h-5" style={{ color: '#10b981' }} />}
       title="Describe your workspace"
       subtitle="Tell us what you need and AI will build the structure for you"
       onSkip={onSkip}
@@ -61,21 +61,49 @@ const StepAIWorkspace = () => {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="e.g. A product team managing sprints, documentation, and design assets…"
           rows={3}
-          className="w-full px-3.5 py-3 rounded-xl bg-surface border border-border/50 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition resize-none"
+          className="likho-input w-full px-3.5 py-3 rounded-xl text-sm resize-none transition-all focus:outline-none"
+          style={{
+            border: '1px solid #e4e4e7',
+            backgroundColor: '#ffffff',
+            color: '#09090b',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#10b981';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.1)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = '#e4e4e7';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
         />
       </div>
 
       {/* Example prompts */}
       {!preview && (
         <div className="mb-5">
-          <p className="text-xs text-muted-foreground mb-2">Try an example:</p>
+          <p className="text-xs mb-2" style={{ color: '#a1a1aa' }}>Try an example:</p>
           <div className="space-y-1.5">
             {EXAMPLE_PROMPTS.map((ex) => (
               <button
                 key={ex}
                 type="button"
                 onClick={() => setPrompt(ex)}
-                className="w-full text-left text-xs px-3 py-2 rounded-lg bg-surface/50 border border-border/30 text-muted-foreground hover:text-foreground hover:border-border transition"
+                className="w-full text-left text-xs px-3 py-2 rounded-lg transition-all"
+                style={{
+                  border: '1px solid #e4e4e7',
+                  backgroundColor: '#fafafa',
+                  color: '#71717a',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f4f4f5';
+                  e.currentTarget.style.color = '#3f3f46';
+                  e.currentTarget.style.borderColor = '#d4d4d8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fafafa';
+                  e.currentTarget.style.color = '#71717a';
+                  e.currentTarget.style.borderColor = '#e4e4e7';
+                }}
               >
                 {ex}
               </button>
@@ -86,26 +114,32 @@ const StepAIWorkspace = () => {
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-amber-400 mb-4 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg">
+        <p
+          className="text-xs mb-4 px-3 py-2 rounded-lg"
+          style={{ color: '#92400e', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}
+        >
           {error}
         </p>
       )}
 
       {/* Preview result */}
       {preview && (
-        <div className="mb-5 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+        <div
+          className="mb-5 p-4 rounded-xl"
+          style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}
+        >
           {preview.summary && (
-            <p className="text-sm text-foreground mb-3 font-medium">{preview.summary}</p>
+            <p className="text-sm font-semibold mb-3" style={{ color: '#09090b' }}>{preview.summary}</p>
           )}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {preview.folders.slice(0, 4).map((f) => (
-              <div key={f.name} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div key={f.name} className="flex items-center gap-2 text-xs" style={{ color: '#71717a' }}>
                 <span>{f.icon ?? '📁'}</span>
                 <span>{f.name}</span>
               </div>
             ))}
             {preview.folders.length > 4 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: '#a1a1aa' }}>
                 + {preview.folders.length - 4} more folders
               </p>
             )}
@@ -120,7 +154,12 @@ const StepAIWorkspace = () => {
             type="button"
             onClick={generate}
             disabled={!prompt.trim() || isGenerating}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: !prompt.trim() || isGenerating ? '#d1fae5' : '#10b981',
+              color: !prompt.trim() || isGenerating ? '#a7f3d0' : '#ffffff',
+              cursor: !prompt.trim() || isGenerating ? 'not-allowed' : 'pointer',
+            }}
           >
             {isGenerating ? (
               <>
@@ -139,14 +178,30 @@ const StepAIWorkspace = () => {
             <button
               type="button"
               onClick={() => setPreview(null)}
-              className="px-4 py-2.5 rounded-xl border border-border/50 text-sm text-muted-foreground hover:text-foreground transition"
+              className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                border: '1px solid #e4e4e7',
+                color: '#71717a',
+                backgroundColor: '#ffffff',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#fafafa';
+                e.currentTarget.style.color = '#3f3f46';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#71717a';
+              }}
             >
               Try again
             </button>
             <button
               type="button"
               onClick={onNext}
-              className="flex-1 py-2.5 rounded-xl bg-foreground text-background font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#09090b', color: '#fafafa' }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
             >
               Looks good
               <ChevronRight className="w-4 h-4" />

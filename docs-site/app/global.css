@@ -1,0 +1,11 @@
+:root {
+  /* Match Likho's indigo brand palette */
+  --color-fd-primary: 99 102 241;       /* #6366f1 indigo-500 */
+  --color-fd-primary-foreground: 255 255 255;
+}
+
+/* Likho brand overrides */
+.fd-sidebar-header a {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}

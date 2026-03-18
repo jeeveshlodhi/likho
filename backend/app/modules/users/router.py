@@ -9,6 +9,27 @@ from app.modules.users.models import User
 router = APIRouter()
 
 
+@router.get("/check-username")
+def check_username_available(
+    username: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if a username is available for the current user.
+    Returns available=true if the username is not taken by another user.
+    """
+    if not username or len(username) < 3:
+        return {"available": False, "message": "Username must be at least 3 characters"}
+    
+    # Check if username is taken by another user
+    existing = crud.get_user_by_username(db, username=username)
+    if existing and existing.id != current_user.id:
+        return {"available": False, "message": "Username is already taken"}
+    
+    return {"available": True, "message": "Username is available"}
+
+
 @router.post("/", response_model=schemas.UserResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)

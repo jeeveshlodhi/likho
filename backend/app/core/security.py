@@ -31,3 +31,37 @@ def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def create_password_reset_token(user_id: str) -> str:
+    """
+    Create a JWT token for password reset.
+    Token expires in PASSWORD_RESET_TOKEN_EXPIRE_MINUTES.
+    """
+    expire = datetime.datetime.utcnow() + datetime.timedelta(
+        minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode = {
+        "sub": str(user_id),
+        "exp": expire,
+        "type": "password_reset",
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """
+    Verify a password reset token and return the user_id if valid.
+    Returns None if token is invalid or expired.
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None
+        user_id: str = payload.get("sub")
+        return user_id
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None

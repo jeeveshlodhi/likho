@@ -129,7 +129,7 @@ export const useChangePassword = () => {
 export const useRequestPasswordReset = () => {
   return useMutation({
     mutationFn: async (email: string) => {
-      const response = await api.post('/auth/request-password-reset', { email });
+      const response = await api.post('/auth/forgot-password', { email });
       return response.data;
     },
   });
@@ -143,7 +143,7 @@ export const useConfirmPasswordReset = () => {
       new_password: string;
       confirm_password: string;
     }) => {
-      const response = await api.post('/auth/confirm-password-reset', payload);
+      const response = await api.post('/auth/reset-password', payload);
       return response.data;
     },
   });

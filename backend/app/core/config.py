@@ -68,6 +68,25 @@ class Settings(BaseSettings):
             and self.AWS_RELEASES_BUCKET
         )
 
+    # Email / SMTP Configuration (for password reset, etc.)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@likho.app"
+    SMTP_FROM_NAME: str = "Likho"
+    SMTP_TLS: bool = True
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(self.SMTP_HOST and self.SMTP_USER and self.SMTP_PASSWORD)
+
+    # Frontend URL (for password reset links)
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # Password reset token expiry (in minutes)
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

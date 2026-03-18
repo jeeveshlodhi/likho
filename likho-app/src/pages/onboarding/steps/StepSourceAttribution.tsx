@@ -30,32 +30,55 @@ const StepSourceAttribution = () => {
 
   return (
     <StepShell
-      icon={<Megaphone className="w-6 h-6 text-indigo-400" />}
+      icon={<Megaphone className="w-5 h-5" style={{ color: '#6366f1' }} />}
       title="Where did you hear about Likho?"
       subtitle="Optional — helps us understand how people find us"
       onSkip={onSkip}
     >
-      <div className="grid grid-cols-2 gap-2.5 mb-6">
-        {SOURCE_OPTIONS.map((opt) => (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => setSelected(opt.id === selected ? '' : opt.id)}
-            className={`p-3 rounded-xl border text-sm text-left transition-all
-              ${selected === opt.id
-                ? 'border-indigo-500/50 bg-indigo-500/10 text-foreground ring-1 ring-indigo-500/30'
-                : 'border-border/40 bg-surface/50 text-muted-foreground hover:border-border hover:text-foreground'
-              }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        {SOURCE_OPTIONS.map((opt) => {
+          const isSelected = selected === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setSelected(opt.id === selected ? '' : opt.id)}
+              className="p-3 rounded-xl text-sm text-left transition-all"
+              style={{
+                border: isSelected ? '1px solid #c7d2fe' : '1px solid #e4e4e7',
+                backgroundColor: isSelected ? '#eef2ff' : '#fafafa',
+                color: isSelected ? '#3730a3' : '#71717a',
+                boxShadow: isSelected ? '0 0 0 3px rgba(99,102,241,0.08)' : 'none',
+                fontWeight: isSelected ? 500 : 400,
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#f4f4f5';
+                  e.currentTarget.style.borderColor = '#d4d4d8';
+                  e.currentTarget.style.color = '#3f3f46';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#fafafa';
+                  e.currentTarget.style.borderColor = '#e4e4e7';
+                  e.currentTarget.style.color = '#71717a';
+                }
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
 
       <button
         type="button"
         onClick={onNext}
-        className="w-full py-2.5 rounded-xl bg-foreground text-background font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+        style={{ backgroundColor: '#09090b', color: '#fafafa' }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
       >
         Continue
         <ChevronRight className="w-4 h-4" />

@@ -38,7 +38,6 @@ const StepSetupLoading = () => {
       default_space: data.default_space,
       sync_mode: data.sync_mode,
     });
-    // Patch onboarded_at in auth store so the wizard guard won't bounce back
     const currentUser = useAuthStore.getState().user;
     if (currentUser && res.data?.onboarded_at) {
       setUser({ ...currentUser, onboarded_at: res.data.onboarded_at });
@@ -91,20 +90,27 @@ const StepSetupLoading = () => {
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
           >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-20 blur-lg" />
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div
+              className="absolute inset-0 rounded-full blur-lg opacity-30"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            />
+            <div
+              className="absolute inset-2 rounded-full flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            >
               <Loader2 className="w-6 h-6 text-white animate-spin" />
             </div>
           </motion.div>
 
-          <h2 className="text-xl font-semibold text-foreground mb-2">
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#09090b', letterSpacing: '-0.02em' }}>
             Setting up your workspace
           </h2>
           <motion.p
             key={copyIdx}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm text-muted-foreground"
+            className="text-sm"
+            style={{ color: '#71717a' }}
           >
             {STEPS_COPY[copyIdx]}
           </motion.p>
@@ -117,32 +123,56 @@ const StepSetupLoading = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            className="w-20 h-20 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-6"
+            className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+            style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}
           >
-            <CheckCircle2 className="w-9 h-9 text-green-400" />
+            <CheckCircle2 className="w-9 h-9" style={{ color: '#22c55e' }} />
           </motion.div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">You're all set!</h2>
-          <p className="text-sm text-muted-foreground">Taking you to your workspace…</p>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#09090b', letterSpacing: '-0.02em' }}>
+            You're all set!
+          </h2>
+          <p className="text-sm" style={{ color: '#71717a' }}>Taking you to your workspace…</p>
         </>
       )}
 
       {phase === 'error' && (
         <>
-          <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
-            <AlertCircle className="w-9 h-9 text-red-400" />
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+            style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}
+          >
+            <AlertCircle className="w-9 h-9" style={{ color: '#ef4444' }} />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Something went wrong</h2>
-          <p className="text-sm text-muted-foreground mb-6">{errorMsg}</p>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#09090b', letterSpacing: '-0.02em' }}>
+            Something went wrong
+          </h2>
+          <p className="text-sm mb-6" style={{ color: '#71717a' }}>{errorMsg}</p>
           <div className="flex gap-3">
             <button
               onClick={retry}
-              className="px-5 py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition"
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ backgroundColor: '#09090b', color: '#fafafa' }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
             >
               Try again
             </button>
             <button
               onClick={() => navigate('/dashboard', { replace: true })}
-              className="px-5 py-2.5 rounded-xl border border-border/50 text-sm text-muted-foreground hover:text-foreground transition"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                border: '1px solid #e4e4e7',
+                color: '#71717a',
+                backgroundColor: '#ffffff',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#fafafa';
+                e.currentTarget.style.color = '#3f3f46';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#71717a';
+              }}
             >
               Skip to dashboard
             </button>
