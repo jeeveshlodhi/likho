@@ -145,13 +145,13 @@ const StepProfileSetup = () => {
               e.currentTarget.style.borderColor = '#6366f1';
               e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
             }}
+            {...register('full_name', {
+              minLength: { value: 2, message: 'At least 2 characters' },
+            })}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = errors.full_name ? '#ef4444' : '#e4e4e7';
               e.currentTarget.style.boxShadow = 'none';
             }}
-            {...register('full_name', {
-              minLength: { value: 2, message: 'At least 2 characters' },
-            })}
           />
           {errors.full_name && (
             <p className="mt-1 text-xs font-medium" style={{ color: '#ef4444' }}>{errors.full_name.message}</p>
@@ -180,11 +180,6 @@ const StepProfileSetup = () => {
                 e.currentTarget.style.borderColor = '#6366f1';
                 e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
               }}
-              onBlur={(e) => {
-                const hasError = errors.username || usernameStatus.available === false;
-                e.currentTarget.style.borderColor = hasError ? '#ef4444' : '#e4e4e7';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
               {...register('username', {
                 minLength: { value: 3, message: 'At least 3 characters' },
                 pattern: {
@@ -198,6 +193,11 @@ const StepProfileSetup = () => {
                   return true;
                 },
               })}
+              onBlur={(e) => {
+                const hasError = errors.username || usernameStatus.available === false;
+                e.currentTarget.style.borderColor = hasError ? '#ef4444' : '#e4e4e7';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
             {/* Status indicator */}
             {usernameStatus.checking && (
