@@ -6,8 +6,6 @@ import {
   ZoomOut, 
   Maximize2, 
   Target,
-  Settings,
-  Filter,
   Search
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspaceStore';
@@ -39,8 +37,7 @@ export default function GraphView() {
   const lastClickTimeRef = useRef(0);
   const lastClickNodeRef = useRef<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showTags, setShowTags] = useState(true);
-  const [showFolders, setShowFolders] = useState(true);
+
   const animationRef = useRef<number | undefined>(undefined);
   
   const notes = useWorkspaceStore((s) => s.notes);
@@ -77,21 +74,9 @@ export default function GraphView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, folders, links, tags, tagUsages]);
   
-  // Filter nodes based on search and settings
+  // Filter nodes based on search
   const visibleNodes = useMemo(() => {
     const filtered = new Map(nodes);
-    
-    if (!showTags) {
-      filtered.forEach((node, id) => {
-        if (node.type === 'tag') filtered.delete(id);
-      });
-    }
-    
-    if (!showFolders) {
-      filtered.forEach((node, id) => {
-        if (node.type === 'folder') filtered.delete(id);
-      });
-    }
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -103,7 +88,7 @@ export default function GraphView() {
     }
     
     return filtered;
-  }, [nodes, showTags, showFolders, searchQuery]);
+  }, [nodes, searchQuery]);
   
   // Physics simulation
   useEffect(() => {
@@ -377,37 +362,7 @@ export default function GraphView() {
         </div>
       </div>
       
-      {/* Controls */}
-      <div className="absolute top-16 left-4 z-10 bg-card border border-border rounded-lg p-3 shadow-lg">
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showTags}
-              onChange={(e) => setShowTags(e.target.checked)}
-              className="rounded"
-            />
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-yellow-500" />
-              Tags
-            </span>
-          </label>
-          
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showFolders}
-              onChange={(e) => setShowFolders(e.target.checked)}
-              className="rounded"
-            />
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-purple-500" />
-              Folders
-            </span>
-          </label>
-        </div>
-      </div>
-      
+
       {/* Canvas */}
       <div
         ref={containerRef}

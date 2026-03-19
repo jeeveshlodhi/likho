@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "likho-app",
+  "productName": "likho",
   "version": "0.1.0",
   "identifier": "com.twobroslab.likho",
   "build": {
