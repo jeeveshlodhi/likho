@@ -32,6 +32,8 @@ from .schemas import (
     PlanProjectResponse,
     JournalSummaryRequest,
     JournalSummaryResponse,
+    ExpandBrainstormRequest,
+    ExpandBrainstormResponse,
 )
 from . import service
 
@@ -269,6 +271,28 @@ async def journal_summary(
             content=req.content,
             date=req.date,
             title=req.title,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ── Brainstorm Expansion ───────────────────────────────────────────────────────
+
+
+@router.post("/expand-brainstorm", response_model=ExpandBrainstormResponse)
+async def expand_brainstorm(
+    req: ExpandBrainstormRequest,
+    current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
+):
+    """Expand a brainstorm node into 5–7 related ideas, questions, and tasks."""
+    try:
+        return await service.expand_brainstorm_node(
+            node_title=req.node_title,
+            node_type=req.node_type,
+            canvas_context=req.canvas_context,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))

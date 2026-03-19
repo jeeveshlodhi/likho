@@ -7,9 +7,10 @@ import KanbanEditor from './KanbanEditor';
 import MeetingEditor from './MeetingEditor';
 import ProjectEditor from './ProjectEditor';
 import JournalEditor from './JournalEditor';
+import BrainstormEditor from './BrainstormEditor';
 
 // Define which page types use which editor
-const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal'> = {
+const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal' | 'brainstorm'> = {
   // Document-based templates use NoteEditor
   note: 'note',
   documentation: 'note',
@@ -21,7 +22,7 @@ const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | '
   meeting: 'meeting',
   // Visual templates
   canvas: 'canvas',
-  brainstorm: 'canvas',
+  brainstorm: 'brainstorm',
   // Planning templates
   kanban: 'kanban',
 };
@@ -57,6 +58,8 @@ export default function PageEditor() {
       return <ProjectEditor />;
     case 'journal':
       return <JournalEditor />;
+    case 'brainstorm':
+      return <BrainstormEditor />;
     case 'note':
     default:
       return <NoteEditor />;

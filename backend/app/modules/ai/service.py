@@ -858,3 +858,61 @@ Be warm, specific, and encouraging. Base insights only on what is shared."""
         return JournalSummaryResponse(
             summary="Unable to generate summary. Add more journal content and try again.",
         )
+
+
+# ── Brainstorm Expansion ───────────────────────────────────────────────────────
+
+async def expand_brainstorm_node(
+    node_title: str,
+    node_type: str,
+    canvas_context: str,
+) -> "ExpandBrainstormResponse":
+    from .schemas import ExpandBrainstormResponse, BrainstormIdea
+
+    client = _get_client()
+    context_line = f"Other ideas on this canvas: {canvas_context}" if canvas_context else ""
+    prompt = f"""You are a creative brainstorming assistant. Expand the following node into 5–7 related ideas.
+
+Node: "{node_title}" (type: {node_type})
+{context_line}
+
+Generate a diverse set of related ideas, questions, tasks, or risks that naturally branch from this concept.
+
+Respond with a JSON object (no markdown fences):
+{{
+  "ideas": [
+    {{"title": "<concise idea title, max 6 words>", "type": "<idea|question|task|note|risk>"}},
+    ...
+  ]
+}}
+
+Rules:
+- Mix types: include questions, tasks, and ideas — not just ideas
+- Be specific and actionable, not generic
+- Each title must be under 6 words
+- Generate 5–7 items"""
+
+    try:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = _strip_fences(resp.content[0].text)
+        parsed = json.loads(raw)
+        valid_types = {"idea", "question", "task", "note", "risk"}
+        ideas = [
+            BrainstormIdea(
+                title=item.get("title", "").strip(),
+                type=item.get("type", "idea") if item.get("type") in valid_types else "idea",
+            )
+            for item in parsed.get("ideas", [])
+            if isinstance(item, dict) and item.get("title", "").strip()
+        ]
+        return ExpandBrainstormResponse(ideas=ideas[:7])
+    except Exception:
+        return ExpandBrainstormResponse(ideas=[
+            BrainstormIdea(title="Related concept", type="idea"),
+            BrainstormIdea(title="Key question to ask?", type="question"),
+            BrainstormIdea(title="Next action step", type="task"),
+        ])

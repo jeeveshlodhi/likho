@@ -17,9 +17,10 @@ import {
 } from 'lucide-react';
 import { DEFAULT_STATUSES } from '@/types/project';
 import { DEFAULT_HABITS } from '@/types/journal';
+import { createDefaultBrainstormData } from '@/types/brainstorm';
 
 export interface TemplateContent {
-  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal';
+  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal' | 'brainstorm';
   data: any;
 }
 
@@ -277,27 +278,10 @@ const createDocumentationContent = () =>
     },
   ]);
 
-// Brainstorm canvas with starter elements
+// Brainstorm — returns BrainstormData structure used by BrainstormEditor
 const createBrainstormCanvasContent = () => ({
-  type: 'canvas' as const,
-  data: {
-    elements: [
-      {
-        id: 'center',
-        type: 'text',
-        x: 0,
-        y: 0,
-        width: 200,
-        height: 60,
-        text: 'Central Idea',
-        fontSize: 24,
-        textAlign: 'center',
-        backgroundColor: '#fef3c7',
-        strokeColor: '#f59e0b',
-      },
-    ],
-    camera: { x: 0, y: 0, zoom: 1 },
-  },
+  type: 'brainstorm' as const,
+  data: createDefaultBrainstormData('Central Idea'),
 });
 
 // Page Templates Registry
@@ -407,7 +391,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   {
     id: 'brainstorm',
     label: 'Brainstorm',
-    description: 'Canvas with central idea node',
+    description: 'Visual mind map with AI idea expansion',
     icon: Lightbulb,
     category: 'visual',
     color: '#eab308',
@@ -415,8 +399,8 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     defaultTitle: 'Brainstorm',
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createBrainstormCanvasContent,
-    features: ['Mind map', 'Ideas', 'Connections'],
-    comingSoon: true,
+    features: ['Mind map', 'Node types', 'AI expansion', 'Connections'],
+    isNew: true,
   },
 ];
 

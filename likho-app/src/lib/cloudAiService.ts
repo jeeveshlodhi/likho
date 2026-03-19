@@ -173,6 +173,23 @@ export interface JournalInsightsResponse {
   entry_count: number;
 }
 
+// ── Brainstorm Expansion ──────────────────────────────────────────────────────
+
+export interface ExpandBrainstormRequest {
+  node_title: string;
+  node_type: string;
+  canvas_context?: string; // other node titles for context
+}
+
+export interface BrainstormIdea {
+  title: string;
+  type: string; // idea | question | task | note | risk
+}
+
+export interface ExpandBrainstormResponse {
+  ideas: BrainstormIdea[];
+}
+
 // ── Journal Summary ───────────────────────────────────────────────────────────
 
 export interface JournalSummaryRequest {
@@ -294,6 +311,11 @@ export const CloudAiService = {
 
   async summarizeJournal(req: JournalSummaryRequest): Promise<JournalSummaryResponse> {
     const { data } = await api.post<JournalSummaryResponse>('/ai/journal-summary', req);
+    return data;
+  },
+
+  async expandBrainstormNode(req: ExpandBrainstormRequest): Promise<ExpandBrainstormResponse> {
+    const { data } = await api.post<ExpandBrainstormResponse>('/ai/expand-brainstorm', req);
     return data;
   },
 };

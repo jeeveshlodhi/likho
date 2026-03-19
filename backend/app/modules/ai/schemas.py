@@ -241,3 +241,20 @@ class JournalSummaryResponse(BaseModel):
     mood_insight: str = ""
     productivity_feedback: str = ""
     tomorrow_suggestions: list[str] = []
+
+# ── Brainstorm Expansion ───────────────────────────────────────────────────────
+
+
+class ExpandBrainstormRequest(BaseModel):
+    node_title: str
+    node_type: str = "idea"
+    canvas_context: str = ""
+
+
+class BrainstormIdea(BaseModel):
+    title: str
+    type: str = "idea"  # idea | question | task | note | risk
+
+
+class ExpandBrainstormResponse(BaseModel):
+    ideas: list[BrainstormIdea] = []
