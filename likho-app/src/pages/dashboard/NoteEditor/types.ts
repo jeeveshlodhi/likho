@@ -1,4 +1,5 @@
 import type { WebsocketProvider } from 'y-websocket';
+import type { SaveStatus } from '@/hooks/useAutoSave';
 
 export interface NoteEditorBodyProps {
   note: any;
@@ -17,6 +18,7 @@ export interface NoteEditorBodyProps {
   showComments: boolean;
   setShowComments: (v: boolean) => void;
   save: (updates: any) => void;
+  saveStatus: SaveStatus;
   notes: any[];
   folders: any[];
   scanNoteForLinks: (note: any, notes: any[], folders: any[]) => void;

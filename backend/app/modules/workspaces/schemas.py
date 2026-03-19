@@ -1,10 +1,10 @@
 """
 Pydantic schemas for workspaces, spaces, and pages.
 """
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, Field, field_serializer
 from uuid import UUID
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 import enum
 
 
@@ -45,19 +45,19 @@ class SpaceResponse(BaseModel):
 # ── Page ──
 
 class PageCreate(BaseModel):
-    title: str = "Untitled"
+    title: str = Field("Untitled", max_length=500)
     space_id: UUID
     parent_id: UUID | None = None
     is_folder: bool = False
-    icon: str | None = None
+    icon: str | None = Field(None, max_length=100)
     content: Any | None = None
-    page_type: str = "note"  # 'note', 'canvas', 'kanban'
+    page_type: Literal["note", "canvas", "kanban", "journal", "meeting", "project", "documentation", "brainstorm"] = "note"
 
 
 class PageUpdate(BaseModel):
-    title: str | None = None
-    icon: str | None = None
-    cover_url: str | None = None
+    title: str | None = Field(None, max_length=500)
+    icon: str | None = Field(None, max_length=100)
+    cover_url: str | None = Field(None, max_length=2048)
     content: Any | None = None
     is_locked: bool | None = None
 

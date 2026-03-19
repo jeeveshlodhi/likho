@@ -13,23 +13,23 @@ from .enums import PlanType, ThemeType, AuthProvider, DeviceType, MemberRole
 class UserBase(BaseModel):
     """Base user schema with common fields"""
     email: EmailStr
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    bio: Optional[str] = None
+    username: Optional[str] = Field(None, max_length=50)
+    full_name: Optional[str] = Field(None, max_length=100)
+    avatar_url: Optional[str] = Field(None, max_length=2048)
+    bio: Optional[str] = Field(None, max_length=500)
 
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
-    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    password: str = Field(..., min_length=8, max_length=128, description="Password must be at least 8 characters")
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user information"""
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    bio: Optional[str] = None
+    username: Optional[str] = Field(None, max_length=50)
+    full_name: Optional[str] = Field(None, max_length=100)
+    avatar_url: Optional[str] = Field(None, max_length=2048)
+    bio: Optional[str] = Field(None, max_length=500)
 
 
 class UserPreferencesUpdate(BaseModel):
@@ -240,9 +240,9 @@ class DeviceRegistryResponse(BaseModel):
 class SignUpRequest(BaseModel):
     """Schema for user sign up"""
     email: EmailStr
-    password: str = Field(..., min_length=8)
-    full_name: Optional[str] = None
-    username: Optional[str] = None
+    password: str = Field(..., min_length=8, max_length=128)
+    full_name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=50)
 
 
 class SignUpResponse(BaseModel):
@@ -278,9 +278,9 @@ class TokenRefreshResponse(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     """Schema for changing password"""
-    current_password: str
-    new_password: str = Field(..., min_length=8)
-    confirm_password: str
+    current_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+    confirm_password: str = Field(..., max_length=128)
 
 
 class PasswordResetRequest(BaseModel):
@@ -290,9 +290,9 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirm(BaseModel):
     """Schema for confirming password reset"""
-    token: str
-    new_password: str = Field(..., min_length=8)
-    confirm_password: str
+    token: str = Field(..., max_length=512)
+    new_password: str = Field(..., min_length=8, max_length=128)
+    confirm_password: str = Field(..., max_length=128)
 
 
 class EmailVerificationRequest(BaseModel):

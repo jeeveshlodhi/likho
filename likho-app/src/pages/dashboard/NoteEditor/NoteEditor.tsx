@@ -80,7 +80,7 @@ export default function NoteEditor() {
   const { data: spaces } = useSpaces(workspace?.id);
   const onlineSpaceId = spaces?.find((s) => s.type === 'online')?.id;
 
-  const save = useAutoSave(noteId || '', onlineSpaceId);
+  const { save, saveStatus } = useAutoSave(noteId || '', onlineSpaceId);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -157,6 +157,7 @@ export default function NoteEditor() {
       showComments={showComments}
       setShowComments={setShowComments}
       save={save}
+      saveStatus={saveStatus}
       notes={notes}
       folders={folders}
       scanNoteForLinks={scanNoteForLinks}

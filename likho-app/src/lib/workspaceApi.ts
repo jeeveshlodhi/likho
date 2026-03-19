@@ -93,8 +93,8 @@ export async function fetchPage(pageId: string): Promise<PageResponse> {
   return data;
 }
 
-export async function updatePage(pageId: string, updates: PageUpdateData): Promise<PageResponse> {
-  const { data } = await api.patch(`/pages/${pageId}`, updates);
+export async function updatePage(pageId: string, updates: PageUpdateData, signal?: AbortSignal): Promise<PageResponse> {
+  const { data } = await api.patch(`/pages/${pageId}`, updates, { signal });
   return data;
 }
 

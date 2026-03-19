@@ -42,6 +42,7 @@ export function NoteEditorBody({
   showComments,
   setShowComments,
   save,
+  saveStatus,
   notes,
   folders,
   scanNoteForLinks,
@@ -290,6 +291,15 @@ export function NoteEditorBody({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <span className="text-xs text-muted-foreground">Saving…</span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-xs text-muted-foreground">Saved</span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-xs text-destructive">Save failed</span>
+          )}
           {editor && <NoteExportActions editor={editor} note={note} />}
         </div>
       </div>

@@ -1,22 +1,22 @@
-from typing import List, Optional, Any, Dict
-from pydantic import BaseModel
+from typing import List, Optional, Any, Dict, Literal
+from pydantic import BaseModel, Field
 
 
 class OnboardingCompleteRequest(BaseModel):
-    full_name: Optional[str] = None
-    username: Optional[str] = None
-    intent: List[str] = []
-    dev_tasks: List[str] = []
-    team_size: Optional[str] = None
-    source: Optional[str] = None
-    workspace_mode: str = "blank"   # blank | template | ai
-    workspace_prompt: Optional[str] = None
-    default_space: str = "online"   # online | offline
-    sync_mode: str = "auto"         # always auto (manual mode removed)
+    full_name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=50)
+    intent: List[str] = Field(default_factory=list, max_length=20)
+    dev_tasks: List[str] = Field(default_factory=list, max_length=20)
+    team_size: Optional[str] = Field(None, max_length=50)
+    source: Optional[str] = Field(None, max_length=100)
+    workspace_mode: Literal["blank", "template", "ai"] = "blank"
+    workspace_prompt: Optional[str] = Field(None, max_length=1000)
+    default_space: Literal["online", "offline"] = "online"
+    sync_mode: Literal["auto"] = "auto"
 
 
 class WorkspaceGenerateRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, max_length=1000)
 
 
 class GeneratedFolder(BaseModel):

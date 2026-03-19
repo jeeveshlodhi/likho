@@ -12,6 +12,7 @@ from app.core.redis.client import close_redis
 from app.core.rate_limiter import close_rate_limiter
 from app.exceptions.rate_limit import setup_rate_limit_exception_handler
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.modules.users.router import router as users_router
 from app.modules.auth.router import router as auth_router
 from app.modules.workspaces.router import workspace_router, pages_router
@@ -58,9 +59,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
 )
+
+# Security headers on every response
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add rate limiting middleware using add_middleware with proper factory
 # We need to use a different approach since RateLimitMiddleware takes app in __init__

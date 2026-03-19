@@ -1,11 +1,30 @@
 """
 API endpoints for workspaces, spaces, and pages.
 """
+import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+
+# Maximum allowed size for page content JSON (10 MB)
+_MAX_CONTENT_BYTES = 10 * 1024 * 1024
+
+
+def _check_content_size(content: any) -> None:
+    """Raise 413 if the serialised content exceeds the size limit."""
+    if content is None:
+        return
+    try:
+        size = len(json.dumps(content).encode("utf-8"))
+    except (TypeError, ValueError):
+        return
+    if size > _MAX_CONTENT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Page content exceeds the maximum allowed size of {_MAX_CONTENT_BYTES // (1024 * 1024)} MB.",
+        )
 
 from app.core.database import get_db
 from app.core.deps import get_current_active_user
@@ -68,6 +87,7 @@ def create_page(
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a new page or folder."""
+    _check_content_size(data.content)
     space = crud.get_space(db, data.space_id)
     if not space:
         raise HTTPException(status_code=404, detail="Space not found")
@@ -130,6 +150,7 @@ def update_page(
     current_user: User = Depends(get_current_active_user),
 ):
     """Update a page's title, content, icon, etc."""
+    _check_content_size(data.content)
     page = crud.get_page(db, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
