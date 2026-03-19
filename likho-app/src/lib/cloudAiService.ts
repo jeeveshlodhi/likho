@@ -173,6 +173,45 @@ export interface JournalInsightsResponse {
   entry_count: number;
 }
 
+// ── Journal Summary ───────────────────────────────────────────────────────────
+
+export interface JournalSummaryRequest {
+  content: string;
+  date: string;
+  title?: string;
+}
+
+export interface JournalSummaryResponse {
+  summary: string;
+  mood_insight: string;
+  productivity_feedback: string;
+  tomorrow_suggestions: string[];
+}
+
+// ── Project Planning ──────────────────────────────────────────────────────────
+
+export interface PlanProjectRequest {
+  title: string;
+  context: string; // description + goals + dates as text
+}
+
+export interface PlanProjectTask {
+  title: string;
+  priority: string;
+  due_date?: string;
+}
+
+export interface PlanProjectMilestone {
+  title: string;
+  due_date?: string;
+}
+
+export interface PlanProjectResponse {
+  plan: string;
+  tasks: PlanProjectTask[];
+  milestones: PlanProjectMilestone[];
+}
+
 // ── Cloud Temp Notes (sync) ───────────────────────────────────────────────────
 
 export interface CloudTempNoteCreate {
@@ -245,6 +284,16 @@ export const CloudAiService = {
     const { data } = await api.get<JournalInsightsResponse>('/ai/journal-insights', {
       params: { workspace_id: workspaceId },
     });
+    return data;
+  },
+
+  async planProject(req: PlanProjectRequest): Promise<PlanProjectResponse> {
+    const { data } = await api.post<PlanProjectResponse>('/ai/plan-project', req);
+    return data;
+  },
+
+  async summarizeJournal(req: JournalSummaryRequest): Promise<JournalSummaryResponse> {
+    const { data } = await api.post<JournalSummaryResponse>('/ai/journal-summary', req);
     return data;
   },
 };

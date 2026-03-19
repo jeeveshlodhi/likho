@@ -200,3 +200,44 @@ class JournalInsightsResponse(BaseModel):
     sentiment_trend: list[SentimentEntry] = []
     reflection_prompt: str = ""
     entry_count: int = 0
+
+# ── Project Planning ───────────────────────────────────────────────────────────
+
+
+class PlanProjectRequest(BaseModel):
+    title: str
+    context: str
+    """Project description, goals, and dates as plain text."""
+
+
+class PlanProjectTask(BaseModel):
+    title: str
+    priority: str = "medium"  # urgent | high | medium | low
+    due_date: str | None = None
+
+
+class PlanProjectMilestone(BaseModel):
+    title: str
+    due_date: str | None = None
+
+
+class PlanProjectResponse(BaseModel):
+    plan: str
+    tasks: list[PlanProjectTask] = []
+    milestones: list[PlanProjectMilestone] = []
+
+# ── Journal Summary ────────────────────────────────────────────────────────────
+
+
+class JournalSummaryRequest(BaseModel):
+    content: str
+    """All journal sections joined as plain text."""
+    date: str
+    title: str = ""
+
+
+class JournalSummaryResponse(BaseModel):
+    summary: str
+    mood_insight: str = ""
+    productivity_feedback: str = ""
+    tomorrow_suggestions: list[str] = []

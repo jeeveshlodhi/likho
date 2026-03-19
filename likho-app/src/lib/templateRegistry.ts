@@ -5,7 +5,6 @@ import {
   Layout,
   KanbanSquare,
   Calendar,
-  CalendarDays,
   CheckSquare,
   Table,
   BookOpen,
@@ -16,9 +15,11 @@ import {
   Sparkles,
   type LucideIcon as LucideIconType
 } from 'lucide-react';
+import { DEFAULT_STATUSES } from '@/types/project';
+import { DEFAULT_HABITS } from '@/types/journal';
 
 export interface TemplateContent {
-  type: 'blocknote' | 'canvas' | 'kanban' | 'database';
+  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal';
   data: any;
 }
 
@@ -195,96 +196,36 @@ const createMeetingNotesContent = () =>
     },
   ]);
 
-// Project plan template
-const createProjectPlanContent = () =>
-  createBlockNoteContent([
-    {
-      type: 'heading',
-      attrs: { level: 1 },
-      content: [{ type: 'text', text: 'Project Plan' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: 'Overview' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: 'Goals' }],
-    },
-    {
-      type: 'bulletListItem',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: 'Timeline' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: 'Resources' }],
-    },
-    {
-      type: 'bulletListItem',
-      content: [{ type: 'text', text: '' }],
-    },
-  ]);
+// Project plan template — returns ProjectData structure used by ProjectEditor
+const createProjectPlanContent = () => ({
+  type: 'project' as const,
+  data: {
+    status: 'planning',
+    health: 'on_track',
+    description: '',
+    members: [],
+    goals: [],
+    statuses: DEFAULT_STATUSES,
+    tasks: [],
+    milestones: [],
+    labels: [],
+  },
+});
 
-// Daily journal template
-const createJournalContent = () =>
-  createBlockNoteContent([
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: '🌅 Morning Thoughts' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: '✅ Today\'s Priorities' }],
-    },
-    {
-      type: 'checkListItem',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: '📝 Notes & Ideas' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-    {
-      type: 'heading',
-      attrs: { level: 2 },
-      content: [{ type: 'text', text: '🌙 Evening Reflection' }],
-    },
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text: '' }],
-    },
-  ]);
+// Daily journal template — returns JournalData structure used by JournalEditor
+const createJournalContent = () => ({
+  type: 'journal' as const,
+  data: {
+    date: new Date().toISOString(),
+    priorities: [],
+    accomplishments: [],
+    went_well: [],
+    didnt_go_well: [],
+    learnings: [],
+    gratitude: [],
+    habits: DEFAULT_HABITS.map((h) => ({ ...h, completed: false })),
+  },
+});
 
 // Documentation template
 const createDocumentationContent = () =>
@@ -383,11 +324,11 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     category: 'documents',
     color: '#06b6d4',
     gradient: 'from-cyan-500/20 to-cyan-600/5',
-    defaultTitle: 'Meeting Notes',
+    defaultTitle: `Meeting – ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createMeetingNotesContent,
     features: ['Agenda', 'Action items', 'Attendees'],
-    comingSoon: true,
+    isNew: true,
   },
   {
     id: 'documentation',
@@ -421,29 +362,15 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   {
     id: 'project',
     label: 'Project Plan',
-    description: 'Plan and track your projects',
+    description: 'AI-powered project with tasks, milestones, and views',
     icon: Briefcase,
     category: 'planning',
     color: '#8b5cf6',
     gradient: 'from-violet-500/20 to-violet-600/5',
-    defaultTitle: 'Project Plan',
+    defaultTitle: 'New Project',
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createProjectPlanContent,
-    features: ['Goals', 'Timeline', 'Resources'],
-    comingSoon: true,
-  },
-  {
-    id: 'calendar',
-    label: 'Calendar',
-    description: 'Unified timeline for notes, tasks, reminders and AI plans',
-    icon: CalendarDays,
-    category: 'planning',
-    color: '#0ea5e9',
-    gradient: 'from-sky-500/20 to-sky-600/5',
-    defaultTitle: 'Calendar',
-    supportsSpaces: ['online', 'offline'],
-    contentGenerator: () => createBlockNoteContent(),
-    features: ['Day / Week / Month', 'Drag & drop', 'AI day planner'],
+    features: ['Tasks', 'Milestones', 'Board', 'Timeline', 'AI Planning'],
     isNew: true,
   },
 
@@ -451,16 +378,16 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   {
     id: 'journal',
     label: 'Daily Journal',
-    description: 'Reflect and plan your day',
+    description: 'Mood, habits, reflections, and AI insights',
     icon: Calendar,
     category: 'knowledge',
     color: '#ec4899',
     gradient: 'from-pink-500/20 to-pink-600/5',
-    defaultTitle: "Today's Journal",
+    defaultTitle: `Journal – ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createJournalContent,
-    features: ['Reflection', 'Priorities', 'Ideas'],
-    comingSoon: true,
+    features: ['Mood tracking', 'Habits', 'Reflection', 'AI insights'],
+    isNew: true,
   },
 
   // Visual

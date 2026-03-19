@@ -28,6 +28,10 @@ from .schemas import (
     DigestRequest,
     DigestResponse,
     JournalInsightsResponse,
+    PlanProjectRequest,
+    PlanProjectResponse,
+    JournalSummaryRequest,
+    JournalSummaryResponse,
 )
 from . import service
 
@@ -225,6 +229,46 @@ async def journal_insights(
         return await service.journal_insights(
             workspace_id=workspace_id,
             db=db,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ── Project Planning ───────────────────────────────────────────────────────────
+
+
+@router.post("/plan-project", response_model=PlanProjectResponse)
+async def plan_project(
+    req: PlanProjectRequest,
+    current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
+):
+    """AI-generated project plan: milestones, tasks, and timeline from project context."""
+    try:
+        return await service.plan_project(title=req.title, context=req.context)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ── Journal Summary ────────────────────────────────────────────────────────────
+
+
+@router.post("/journal-summary", response_model=JournalSummaryResponse)
+async def journal_summary(
+    req: JournalSummaryRequest,
+    current_user: User = Depends(get_current_active_user),
+    _: None = Depends(rate_limit_ai),
+):
+    """Summarise a single journal entry — mood insight, productivity, tomorrow suggestions."""
+    try:
+        return await service.journal_summary(
+            content=req.content,
+            date=req.date,
+            title=req.title,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))

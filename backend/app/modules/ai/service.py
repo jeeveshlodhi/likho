@@ -753,3 +753,108 @@ async def journal_insights(
         )
     except Exception:
         return JournalInsightsResponse(entry_count=len(pages))
+
+
+# ── Project Planning ───────────────────────────────────────────────────────────
+
+async def plan_project(title: str, context: str) -> "PlanProjectResponse":
+    from .schemas import PlanProjectResponse, PlanProjectTask, PlanProjectMilestone
+
+    client = _get_client()
+    prompt = f"""You are a project management expert. Given the project details below, generate a structured project plan.
+
+Project: {title}
+{context}
+
+Respond with a JSON object (no markdown fences) with these fields:
+{{
+  "plan": "<2-3 sentence summary of the recommended approach>",
+  "milestones": [
+    {{"title": "<milestone name>", "due_date": "<YYYY-MM-DD or null>"}}
+  ],
+  "tasks": [
+    {{"title": "<task name>", "priority": "<urgent|high|medium|low>", "due_date": "<YYYY-MM-DD or null>"}}
+  ]
+}}
+
+Generate 3-5 milestones and 8-15 concrete tasks. Prioritize based on project goals."""
+
+    try:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = _strip_fences(resp.content[0].text)
+        parsed = json.loads(raw)
+
+        tasks = [
+            PlanProjectTask(
+                title=t.get("title", ""),
+                priority=t.get("priority", "medium"),
+                due_date=t.get("due_date"),
+            )
+            for t in parsed.get("tasks", [])
+            if isinstance(t, dict) and t.get("title")
+        ]
+        milestones = [
+            PlanProjectMilestone(
+                title=m.get("title", ""),
+                due_date=m.get("due_date"),
+            )
+            for m in parsed.get("milestones", [])
+            if isinstance(m, dict) and m.get("title")
+        ]
+        return PlanProjectResponse(
+            plan=parsed.get("plan", ""),
+            tasks=tasks,
+            milestones=milestones,
+        )
+    except Exception:
+        return PlanProjectResponse(
+            plan="Unable to generate plan. Add project goals and description, then try again.",
+        )
+
+
+# ── Journal Summary ────────────────────────────────────────────────────────────
+
+async def journal_summary(content: str, date: str, title: str) -> "JournalSummaryResponse":
+    from .schemas import JournalSummaryResponse
+
+    client = _get_client()
+    prompt = f"""You are a thoughtful personal coach reviewing someone's daily journal entry.
+
+Date: {date}
+{f"Title: {title}" if title else ""}
+
+Journal entry:
+{content}
+
+Respond with a JSON object (no markdown fences) with these fields:
+{{
+  "summary": "<2-3 sentence summary of the person's day>",
+  "mood_insight": "<1-2 sentence insight about their emotional state and what may be driving it>",
+  "productivity_feedback": "<1-2 sentence observation about their productivity and focus>",
+  "tomorrow_suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"]
+}}
+
+Be warm, specific, and encouraging. Base insights only on what is shared."""
+
+    try:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = _strip_fences(resp.content[0].text)
+        parsed = json.loads(raw)
+        return JournalSummaryResponse(
+            summary=parsed.get("summary", ""),
+            mood_insight=parsed.get("mood_insight", ""),
+            productivity_feedback=parsed.get("productivity_feedback", ""),
+            tomorrow_suggestions=parsed.get("tomorrow_suggestions", [])[:4],
+        )
+    except Exception:
+        return JournalSummaryResponse(
+            summary="Unable to generate summary. Add more journal content and try again.",
+        )

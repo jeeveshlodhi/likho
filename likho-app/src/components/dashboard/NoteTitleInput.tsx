@@ -4,9 +4,10 @@ import type { Note } from '@/types/workspace';
 
 interface NoteTitleInputProps {
     note: Note;
+    placeholder?: string;
 }
 
-export default function NoteTitleInput({ note }: NoteTitleInputProps) {
+export default function NoteTitleInput({ note, placeholder = 'Untitled' }: NoteTitleInputProps) {
     const [localTitle, setLocalTitle] = useState(note.title);
     const save = useAutoSave(note.id);
 
@@ -24,7 +25,7 @@ export default function NoteTitleInput({ note }: NoteTitleInputProps) {
                 setLocalTitle(newValue);
                 save({ title: newValue });
             }}
-            placeholder="Untitled"
+            placeholder={placeholder}
             className="mb-1 w-full bg-transparent text-xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
         />
     );

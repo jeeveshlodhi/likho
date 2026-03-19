@@ -4,15 +4,21 @@ import type { PageType } from '@/types/workspace';
 import NoteEditor from './NoteEditor';
 import CanvasEditor from './CanvasEditor';
 import KanbanEditor from './KanbanEditor';
+import MeetingEditor from './MeetingEditor';
+import ProjectEditor from './ProjectEditor';
+import JournalEditor from './JournalEditor';
 
 // Define which page types use which editor
-const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban'> = {
+const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal'> = {
   // Document-based templates use NoteEditor
   note: 'note',
-  meeting: 'note',
-  project: 'note',
-  journal: 'note',
   documentation: 'note',
+  // Journal gets its own structured editor
+  journal: 'journal',
+  // Project gets its own structured editor
+  project: 'project',
+  // Meeting gets its own structured editor
+  meeting: 'meeting',
   // Visual templates
   canvas: 'canvas',
   brainstorm: 'canvas',
@@ -45,6 +51,12 @@ export default function PageEditor() {
       return <CanvasEditor />;
     case 'kanban':
       return <KanbanEditor />;
+    case 'meeting':
+      return <MeetingEditor />;
+    case 'project':
+      return <ProjectEditor />;
+    case 'journal':
+      return <JournalEditor />;
     case 'note':
     default:
       return <NoteEditor />;
