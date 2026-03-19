@@ -9,7 +9,8 @@ export type PageType =
   | 'project'
   | 'journal'
   | 'documentation'
-  | 'brainstorm';
+  | 'brainstorm'
+  | 'calendar';
 
 export interface Folder {
   id: string;

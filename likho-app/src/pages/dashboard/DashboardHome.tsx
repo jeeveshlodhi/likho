@@ -22,6 +22,12 @@ export default function DashboardHome() {
   const [newPageModalOpen, setNewPageModalOpen] = useState(false);
 
   const handleNewPageSelect = async (spaceType: SpaceType, templateId: PageType) => {
+    // Calendar is a workspace-level view, not a per-note document
+    if (templateId === 'calendar') {
+      navigate('/dashboard/calendar');
+      return;
+    }
+
     const template = getTemplateById(templateId);
     const templateContent = getTemplateContent(templateId);
     const defaultTitle = template?.defaultTitle || 'Untitled';

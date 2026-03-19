@@ -5,6 +5,7 @@ import {
   Layout,
   KanbanSquare,
   Calendar,
+  CalendarDays,
   CheckSquare,
   Table,
   BookOpen,
@@ -430,6 +431,20 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     contentGenerator: createProjectPlanContent,
     features: ['Goals', 'Timeline', 'Resources'],
     comingSoon: true,
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    description: 'Unified timeline for notes, tasks, reminders and AI plans',
+    icon: CalendarDays,
+    category: 'planning',
+    color: '#0ea5e9',
+    gradient: 'from-sky-500/20 to-sky-600/5',
+    defaultTitle: 'Calendar',
+    supportsSpaces: ['online', 'offline'],
+    contentGenerator: () => createBlockNoteContent(),
+    features: ['Day / Week / Month', 'Drag & drop', 'AI day planner'],
+    isNew: true,
   },
 
   // Knowledge

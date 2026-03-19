@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeft, Share2, Clock, Plus, MessageSquare, Users, Sparkles, FolderOpen, Activity, BarChart3 } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, Share2, Clock, Plus, MessageSquare, Users, Sparkles, FolderOpen, Activity, BarChart3, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useAuthStore } from '@/store/authStore';
@@ -100,6 +100,13 @@ export default function Sidebar() {
             className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <BarChart3 size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/calendar')}
+            title="Calendar"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <CalendarDays size={18} />
           </button>
         </div>
         <div className="flex-1" />
@@ -213,6 +220,13 @@ export default function Sidebar() {
           >
             <MessageSquare size={16} />
             Ask AI
+          </button>
+          <button
+            onClick={() => navigate('/dashboard/calendar')}
+            className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+          >
+            <CalendarDays size={16} />
+            Calendar
           </button>
         </div>
       </div>

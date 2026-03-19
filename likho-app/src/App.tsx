@@ -20,6 +20,7 @@ import TempNotesDashboard from "@/pages/dashboard/TempNotesDashboard";
 import { WorkspaceRagChat } from "@/pages/dashboard/WorkspaceRagChat";
 import { AiChat } from "@/pages/dashboard/AiChat";
 import SharedWithMe from "@/pages/dashboard/SharedWithMe";
+import CalendarPage from "@/pages/dashboard/CalendarPage";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import AppTitleBar from "@/components/tauri/AppTitleBar";
 import { isTauri } from "@/utils/platform";
@@ -63,6 +64,7 @@ function App() {
         <Route path="ai-chat" element={<AiChat />} />
         <Route path="ai-chat-rag" element={<WorkspaceRagChat />} />
         <Route path="shared-with-me" element={<SharedWithMe />} />
+        <Route path="calendar" element={<CalendarPage />} />
       </Route>
     </Routes>
   );
