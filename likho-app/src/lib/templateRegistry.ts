@@ -13,6 +13,7 @@ import {
   Briefcase,
   Users,
   Sparkles,
+  FileSearch,
   type LucideIcon as LucideIconType
 } from 'lucide-react';
 import { DEFAULT_STATUSES } from '@/types/project';
@@ -20,7 +21,7 @@ import { DEFAULT_HABITS } from '@/types/journal';
 import { createDefaultBrainstormData } from '@/types/brainstorm';
 
 export interface TemplateContent {
-  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal' | 'brainstorm';
+  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal' | 'brainstorm' | 'pdf';
   data: any;
 }
 
@@ -284,6 +285,17 @@ const createBrainstormCanvasContent = () => ({
   data: createDefaultBrainstormData('Central Idea'),
 });
 
+// PDF Workspace — stores base64 PDF + per-page annotations
+const createPdfWorkspaceContent = () => ({
+  type: 'pdf' as const,
+  data: {
+    pdfBase64: null,
+    pdfName: null,
+    annotations: {},
+    zoom: 1.0,
+  },
+});
+
 // Page Templates Registry
 export const PAGE_TEMPLATES: PageTemplate[] = [
   // Documents
@@ -400,6 +412,22 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     supportsSpaces: ['online', 'offline'],
     contentGenerator: createBrainstormCanvasContent,
     features: ['Mind map', 'Node types', 'AI expansion', 'Connections'],
+    isNew: true,
+  },
+
+  // Productivity
+  {
+    id: 'pdf',
+    label: 'PDF Workspace',
+    description: 'Upload a PDF and annotate it with highlights, drawings, and sticky notes',
+    icon: FileSearch,
+    category: 'productivity',
+    color: '#f97316',
+    gradient: 'from-orange-500/20 to-orange-600/5',
+    defaultTitle: 'PDF Workspace',
+    supportsSpaces: ['online', 'offline'],
+    contentGenerator: createPdfWorkspaceContent,
+    features: ['PDF rendering', 'Annotations', 'Highlights', 'Freehand draw', 'Export'],
     isNew: true,
   },
 ];

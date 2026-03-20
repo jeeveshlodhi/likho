@@ -8,9 +8,10 @@ import MeetingEditor from './MeetingEditor';
 import ProjectEditor from './ProjectEditor';
 import JournalEditor from './JournalEditor';
 import BrainstormEditor from './BrainstormEditor';
+import PdfEditor from './PdfEditor';
 
 // Define which page types use which editor
-const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal' | 'brainstorm'> = {
+const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal' | 'brainstorm' | 'pdf'> = {
   // Document-based templates use NoteEditor
   note: 'note',
   documentation: 'note',
@@ -25,6 +26,8 @@ const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | '
   brainstorm: 'brainstorm',
   // Planning templates
   kanban: 'kanban',
+  // PDF workspace
+  pdf: 'pdf',
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -60,6 +63,8 @@ export default function PageEditor() {
       return <JournalEditor />;
     case 'brainstorm':
       return <BrainstormEditor />;
+    case 'pdf':
+      return <PdfEditor />;
     case 'note':
     default:
       return <NoteEditor />;

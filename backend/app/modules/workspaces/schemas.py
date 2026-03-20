@@ -51,7 +51,7 @@ class PageCreate(BaseModel):
     is_folder: bool = False
     icon: str | None = Field(None, max_length=100)
     content: Any | None = None
-    page_type: Literal["note", "canvas", "kanban", "journal", "meeting", "project", "documentation", "brainstorm"] = "note"
+    page_type: Literal["note", "canvas", "kanban", "journal", "meeting", "project", "documentation", "brainstorm", "pdf"] = "note"
 
 
 class PageUpdate(BaseModel):
