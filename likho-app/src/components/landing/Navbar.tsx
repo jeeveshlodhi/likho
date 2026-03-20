@@ -42,10 +42,10 @@ const Navbar = ({ scrollContainerRef }: NavbarProps) => {
   };
 
   const navLinks = [
-    { label: 'Features', href: '#features', external: false, route: false },
-    { label: 'Templates', href: '#templates', external: false, route: false },
+    { label: 'Features', href: '/#features', external: false, route: true },
+    { label: 'Templates', href: '/#templates', external: false, route: true },
     { label: 'Pricing', href: '/pricing', external: false, route: true },
-    { label: 'Docs', href: 'https://docs.likho.app', external: true, route: false },
+    { label: 'Contact', href: '/contact', external: false, route: true },
   ];
 
   const scrollToSection = (href: string) => {

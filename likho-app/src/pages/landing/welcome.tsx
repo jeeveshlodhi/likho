@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { isTauri } from '@/utils/platform';
 import TauriWelcome from '@/components/landing/TauriWelcome';
 import Navbar from '@/components/landing/Navbar';
@@ -16,6 +17,20 @@ import Footer from '@/components/landing/Footer';
 
 const Welcome = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  // Handle hash scrolling when navigating from other pages
+  useEffect(() => {
+    if (location.hash) {
+      const element = document.querySelector(location.hash);
+      if (element) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location]);
 
   // Tauri (desktop app) gets a simple, focused welcome screen
   if (isTauri()) {

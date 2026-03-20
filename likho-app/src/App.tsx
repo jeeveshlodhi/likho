@@ -4,6 +4,10 @@ import { Routes, Route } from "react-router";
 import Welcome from "@/pages/landing/welcome";
 import DownloadPage from "@/pages/landing/DownloadPage";
 import Pricing from "@/pages/landing/Pricing";
+import Contact from "@/pages/landing/Contact";
+import Terms from "@/pages/landing/Terms";
+import Privacy from "@/pages/landing/Privacy";
+import Security from "@/pages/landing/Security";
 import SignIn from "@/pages/auth/sign-in";
 import SignUp from "@/pages/auth/sign-up";
 import ForgotPassword from "@/pages/auth/forgot-password";
@@ -43,6 +47,10 @@ function App() {
       <Route path="/" element={<Welcome />} />
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/security" element={<Security />} />
       <Route path="/auth/sign-in" element={<SignIn />} />
       <Route path="/auth/sign-up" element={<SignUp />} />
       <Route path="/auth/forgot-password" element={<ForgotPassword />} />

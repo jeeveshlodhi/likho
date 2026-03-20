@@ -26,9 +26,9 @@ const footerLinks = (desktopDownloadUrl: string | null) => ({
     { label: 'Contact', href: '#contact', external: false as const, route: false as const },
   ],
   Legal: [
-    { label: 'Privacy', href: '#privacy', external: false as const, route: false as const },
-    { label: 'Terms', href: '#terms', external: false as const, route: false as const },
-    { label: 'Security', href: '#security', external: false as const, route: false as const },
+    { label: 'Privacy', href: '/privacy', external: false as const, route: true as const },
+    { label: 'Terms', href: '/terms', external: false as const, route: true as const },
+    { label: 'Security', href: '/security', external: false as const, route: true as const },
   ],
 });
 
@@ -157,17 +157,21 @@ const Footer = () => {
             © {new Date().getFullYear()} Likho. Built for thinkers.
           </p>
           <div className="flex items-center gap-5">
-            {['Privacy', 'Terms', 'GitHub'].map((item) => (
-              <button
-                key={item}
-                onClick={() => scrollToSection(`#${item.toLowerCase()}`)}
+            {[
+              { label: 'Privacy', href: '/privacy' },
+              { label: 'Terms', href: '/terms' },
+              { label: 'Security', href: '/security' },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                to={item.href}
                 className="text-xs transition-colors"
                 style={{ color: '#a1a1aa' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#3f3f46')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#a1a1aa')}
               >
-                {item}
-              </button>
+                {item.label}
+              </Link>
             ))}
           </div>
         </div>

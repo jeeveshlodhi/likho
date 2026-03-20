@@ -42,8 +42,8 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     desc: 'For power users who need more',
-    monthlyPrice: 12,
-    yearlyPrice: 96,
+    monthlyPrice: 999,
+    yearlyPrice: 9999,
     icon: Zap,
     iconColor: '#8b5cf6',
     iconBg: '#f5f3ff',
@@ -70,8 +70,8 @@ const PLANS = [
     id: 'team',
     name: 'Team',
     desc: 'For teams that think together',
-    monthlyPrice: 24,
-    yearlyPrice: 192,
+    monthlyPrice: 1999,
+    yearlyPrice: 19999,
     perUser: true,
     icon: Users,
     iconColor: '#06b6d4',
@@ -202,7 +202,7 @@ const PricingCard = ({
               className="text-4xl font-black tracking-tight"
               style={{ color: isPrimary ? '#fafafa' : '#09090b' }}
             >
-              {price === 0 ? 'Free' : `$${price}`}
+              {price === 0 ? 'Free' : `₹${price.toLocaleString('en-IN')}`}
             </span>
             {price !== 0 && (
               <span
@@ -215,9 +215,9 @@ const PricingCard = ({
           </div>
           {yearly && plan.yearlyPrice > 0 && (
             <p className="text-xs mt-1" style={{ color: isPrimary ? '#71717a' : '#a1a1aa' }}>
-              Billed ${plan.yearlyPrice}/yr — save{' '}
+              Billed ₹${plan.yearlyPrice.toLocaleString('en-IN')}/yr — save{' '}
               <span style={{ color: isPrimary ? '#86efac' : '#16a34a', fontWeight: 600 }}>
-                ${plan.monthlyPrice * 12 - plan.yearlyPrice}
+                ₹{(plan.monthlyPrice * 12 - plan.yearlyPrice).toLocaleString('en-IN')}
               </span>
             </p>
           )}
@@ -498,7 +498,7 @@ const Pricing = () => {
   return (
     <div ref={scrollContainerRef} className="h-full overflow-y-auto overflow-x-hidden scroll-smooth" style={{ backgroundColor: '#ffffff' }}>
       <Navbar scrollContainerRef={scrollContainerRef} />
-      <main className="pt-16">
+      <main>
         {/* Hero */}
         <PricingHero />
         <PricingSection />
