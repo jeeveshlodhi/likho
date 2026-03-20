@@ -14,14 +14,17 @@ import {
   Users,
   Sparkles,
   FileSearch,
+  BarChart3,
+  BookMarked,
   type LucideIcon as LucideIconType
 } from 'lucide-react';
 import { DEFAULT_STATUSES } from '@/types/project';
 import { DEFAULT_HABITS } from '@/types/journal';
 import { createDefaultBrainstormData } from '@/types/brainstorm';
+import { createDefaultWeeklyReviewData, createDefaultReadingNotesData } from '@/types/journal';
 
 export interface TemplateContent {
-  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal' | 'brainstorm' | 'pdf';
+  type: 'blocknote' | 'canvas' | 'kanban' | 'database' | 'project' | 'journal' | 'brainstorm' | 'pdf' | 'weekly_review' | 'reading_notes';
   data: any;
 }
 
@@ -429,6 +432,40 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     contentGenerator: createPdfWorkspaceContent,
     features: ['PDF rendering', 'Annotations', 'Highlights', 'Freehand draw', 'Export'],
     isNew: true,
+  },
+
+  // Weekly Review — structured weekly reflection
+  {
+    id: 'weekly_review',
+    label: 'Weekly Review',
+    description: 'Reflect on your week, track wins, failures, and plan ahead with AI insights',
+    icon: BarChart3,
+    category: 'productivity',
+    color: '#10b981',
+    gradient: 'from-emerald-500/20 to-emerald-600/5',
+    defaultTitle: 'Weekly Review',
+    supportsSpaces: ['online', 'offline'],
+    contentGenerator: () => ({ type: 'weekly_review' as const, data: createDefaultWeeklyReviewData() }),
+    features: ['Wins & Failures', 'Task comparison', 'Mood tracking', 'AI insights', 'Next priorities'],
+    isNew: true,
+    isBeta: true,
+  },
+
+  // Reading Notes — capture and synthesize knowledge from sources
+  {
+    id: 'reading_notes',
+    label: 'Reading Notes',
+    description: 'Capture highlights, takeaways, and insights from books, articles, and more',
+    icon: BookMarked,
+    category: 'knowledge',
+    color: '#f59e0b',
+    gradient: 'from-amber-500/20 to-amber-600/5',
+    defaultTitle: 'Reading Notes',
+    supportsSpaces: ['online', 'offline'],
+    contentGenerator: () => ({ type: 'reading_notes' as const, data: createDefaultReadingNotesData() }),
+    features: ['Highlights', 'Takeaways', 'Questions', 'Action Items', 'AI synthesis', 'Related notes'],
+    isNew: true,
+    isBeta: true,
   },
 ];
 

@@ -45,7 +45,7 @@ export default function KanbanEditor() {
         }
     }, [note?.content]);
 
-    const save = useAutoSave(noteId || '');
+    const { save } = useAutoSave(noteId || '');
 
     const handleBoardChange = (newData: KanbanBoardData) => {
         setBoardData(newData);

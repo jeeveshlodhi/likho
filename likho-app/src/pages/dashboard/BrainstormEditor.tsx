@@ -308,7 +308,7 @@ export default function BrainstormEditor() {
   const dragging = useRef<{ nodeId: string; startWx: number; startWy: number; startMx: number; startMy: number } | null>(null)
   const panning  = useRef<{ startCamX: number; startCamY: number; startMx: number; startMy: number } | null>(null)
 
-  const save = useAutoSave(noteId ?? '')
+  const { save } = useAutoSave(noteId ?? '')
 
   useEffect(() => { if (noteId) setActiveNote(noteId) }, [noteId, setActiveNote])
   useEffect(() => {

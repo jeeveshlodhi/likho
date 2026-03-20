@@ -9,9 +9,11 @@ import ProjectEditor from './ProjectEditor';
 import JournalEditor from './JournalEditor';
 import BrainstormEditor from './BrainstormEditor';
 import PdfEditor from './PdfEditor';
+import WeeklyReviewEditor from './WeeklyReviewEditor';
+import ReadingNotesEditor from './ReadingNotesEditor';
 
 // Define which page types use which editor
-const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal' | 'brainstorm' | 'pdf'> = {
+const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | 'project' | 'journal' | 'brainstorm' | 'pdf' | 'weekly_review' | 'reading_notes'> = {
   // Document-based templates use NoteEditor
   note: 'note',
   documentation: 'note',
@@ -28,6 +30,10 @@ const EDITOR_ROUTES: Record<string, 'note' | 'canvas' | 'kanban' | 'meeting' | '
   kanban: 'kanban',
   // PDF workspace
   pdf: 'pdf',
+  // Weekly review gets its own structured editor
+  weekly_review: 'weekly_review',
+  // Reading notes gets its own structured editor
+  reading_notes: 'reading_notes',
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -65,6 +71,10 @@ export default function PageEditor() {
       return <BrainstormEditor />;
     case 'pdf':
       return <PdfEditor />;
+    case 'weekly_review':
+      return <WeeklyReviewEditor />;
+    case 'reading_notes':
+      return <ReadingNotesEditor />;
     case 'note':
     default:
       return <NoteEditor />;

@@ -9,7 +9,7 @@ interface NoteTitleInputProps {
 
 export default function NoteTitleInput({ note, placeholder = 'Untitled' }: NoteTitleInputProps) {
     const [localTitle, setLocalTitle] = useState(note.title);
-    const save = useAutoSave(note.id);
+    const { save } = useAutoSave(note.id);
 
     // Sync with global store only if the note changes externally (e.g. note switch)
     useEffect(() => {

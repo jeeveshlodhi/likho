@@ -205,6 +205,27 @@ export interface JournalSummaryResponse {
   tomorrow_suggestions: string[];
 }
 
+// ── Weekly Review Summary ─────────────────────────────────────────────────────
+
+export interface WeeklyReviewSummaryRequest {
+  wins: string[];
+  failures: string[];
+  learnings: string[];
+  tasks: { title: string; completed: boolean; source: string }[];
+  moodLogs: { day: string; mood: string; energyLevel?: number }[];
+  notes?: string;
+  weekStart: string;
+}
+
+export interface WeeklyReviewSummaryResponse {
+  summary: string;
+  themes: string[];
+  productivity_score: number;
+  highlights: string[];
+  insights: string;
+  recommendations: string[];
+}
+
 // ── Project Planning ──────────────────────────────────────────────────────────
 
 export interface PlanProjectRequest {
@@ -316,6 +337,38 @@ export const CloudAiService = {
 
   async expandBrainstormNode(req: ExpandBrainstormRequest): Promise<ExpandBrainstormResponse> {
     const { data } = await api.post<ExpandBrainstormResponse>('/ai/expand-brainstorm', req);
+    return data;
+  },
+
+  async weeklyReviewSummary(req: WeeklyReviewSummaryRequest): Promise<WeeklyReviewSummaryResponse> {
+    const { data } = await api.post<WeeklyReviewSummaryResponse>('/ai/weekly-review-summary', req);
+    return data;
+  },
+
+  async readingNotesAnalysis(req: {
+    title: string;
+    author: string;
+    highlights: { text: string; note?: string }[];
+    synthesis?: string;
+  }): Promise<{
+    summary: string;
+    key_concepts: string[];
+    themes: string[];
+    suggested_questions: string[];
+    action_items: string[];
+  }> {
+    const { data } = await api.post('/ai/reading-notes-analysis', req);
+    return data;
+  },
+
+  async suggestRelatedNotes(req: {
+    title: string;
+    content: string;
+    tags: string[];
+  }): Promise<{
+    related_notes: { note_id: string; title: string; similarity: number }[];
+  }> {
+    const { data } = await api.post('/ai/suggest-related-notes', req);
     return data;
   },
 };

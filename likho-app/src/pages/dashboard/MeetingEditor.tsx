@@ -622,7 +622,7 @@ export default function MeetingEditor() {
   })
   const [aiLoading, setAiLoading] = useState(false)
 
-  const save = useAutoSave(noteId ?? '')
+  const { save } = useAutoSave(noteId ?? '')
 
   useEffect(() => { if (noteId) setActiveNote(noteId) }, [noteId, setActiveNote])
   useEffect(() => {

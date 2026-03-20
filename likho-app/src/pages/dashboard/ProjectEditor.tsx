@@ -1164,7 +1164,7 @@ export default function ProjectEditor() {
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null)
   const [showAi, setShowAi] = useState(false)
 
-  const save = useAutoSave(noteId ?? '')
+  const { save } = useAutoSave(noteId ?? '')
 
   useEffect(() => { if (noteId) setActiveNote(noteId) }, [noteId, setActiveNote])
   useEffect(() => {

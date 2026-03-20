@@ -10,7 +10,9 @@ export type PageType =
   | 'journal'
   | 'documentation'
   | 'brainstorm'
-  | 'pdf';
+  | 'pdf'
+  | 'weekly_review'
+  | 'reading_notes';
 
 export interface Folder {
   id: string;
