@@ -8,6 +8,7 @@ import Contact from "@/pages/landing/Contact";
 import Terms from "@/pages/landing/Terms";
 import Privacy from "@/pages/landing/Privacy";
 import Security from "@/pages/landing/Security";
+import ComingSoon from "@/pages/landing/ComingSoon";
 import SignIn from "@/pages/auth/sign-in";
 import SignUp from "@/pages/auth/sign-up";
 import ForgotPassword from "@/pages/auth/forgot-password";
@@ -51,6 +52,7 @@ function App() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/security" element={<Security />} />
+      <Route path="/coming-soon" element={<ComingSoon />} />
       <Route path="/auth/sign-in" element={<SignIn />} />
       <Route path="/auth/sign-up" element={<SignUp />} />
       <Route path="/auth/forgot-password" element={<ForgotPassword />} />

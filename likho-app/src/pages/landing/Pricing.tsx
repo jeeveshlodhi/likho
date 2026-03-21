@@ -225,7 +225,7 @@ const PricingCard = ({
 
         {/* CTA */}
         <Link
-          to="/auth/sign-up"
+          to={plan.id === 'free' ? '/auth/sign-up' : '/coming-soon'}
           className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-sm font-semibold mb-7 transition-all hover:opacity-90 active:scale-[0.98]"
           style={
             isPrimary

@@ -8,22 +8,22 @@ const footerLinks = (desktopDownloadUrl: string | null) => ({
     ...(desktopDownloadUrl && !isTauri()
       ? [{ label: 'Download Desktop' as const, href: desktopDownloadUrl, external: true as const, route: false as const }]
       : []),
-    { label: 'Features', href: '#features', external: false as const, route: false as const },
-    { label: 'Templates', href: '#templates', external: false as const, route: false as const },
+    { label: 'Features', href: '/', external: false as const, route: true as const },
+    { label: 'Templates', href: '/', external: false as const, route: true as const },
     { label: 'Pricing', href: '/pricing', external: false as const, route: true as const },
-    { label: 'Changelog', href: '#changelog', external: false as const, route: false as const },
+    { label: 'Changelog', href: '/coming-soon', external: false as const, route: true as const },
   ],
   Resources: [
-    { label: 'Docs', href: 'https://docs.likho.app', external: true as const, route: false as const },
-    { label: 'API', href: '#api', external: false as const, route: false as const },
-    { label: 'Community', href: '#community', external: false as const, route: false as const },
-    { label: 'Support', href: '#support', external: false as const, route: false as const },
+    { label: 'Docs', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'API', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'Community', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'Support', href: '/coming-soon', external: false as const, route: true as const },
   ],
   Company: [
-    { label: 'About', href: '#about', external: false as const, route: false as const },
-    { label: 'Blog', href: '#blog', external: false as const, route: false as const },
-    { label: 'Careers', href: '#careers', external: false as const, route: false as const },
-    { label: 'Contact', href: '#contact', external: false as const, route: false as const },
+    { label: 'About', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'Blog', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'Careers', href: '/coming-soon', external: false as const, route: true as const },
+    { label: 'Contact', href: '/contact', external: false as const, route: true as const },
   ],
   Legal: [
     { label: 'Privacy', href: '/privacy', external: false as const, route: true as const },
