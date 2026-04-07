@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions (Q&A)
+    url: https://github.com/twobroslab/likho/discussions
+    about: Ask questions and get help from the community
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/twobroslab/likho/security/advisories/new
+    about: Report a security vulnerability privately

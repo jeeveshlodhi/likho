@@ -1,0 +1,83 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Likho
+labels: ["enhancement", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 💡 Thank you for helping shape Likho!
+        We love hearing ideas from the community. Please fill out the form below to help us understand your suggestion and its impact.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area of Likho does this feature relate to?
+      options:
+        - Editor
+        - AI Features
+        - Collaboration
+        - Workspace
+        - Notes Management
+        - Export / Import
+        - UI / UX
+        - Performance
+        - Accessibility
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem_motivation
+    attributes:
+      label: Problem / Motivation
+      description: |
+        What problem does this feature solve? Is your request related to a frustration or limitation you've encountered?
+        A clear description of the "why" helps us prioritize effectively.
+      placeholder: |
+        e.g. I find it difficult to organize notes across multiple workspaces because there is no way to tag or cross-link them. This means I spend a lot of time manually searching for related content.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature you'd like to see. Be as specific as possible — how should it work, where should it appear, and what should the user experience feel like?
+      placeholder: |
+        e.g. Add a global tagging system that allows users to apply one or more tags to any note. Tags should be visible in the sidebar, and clicking a tag should show all notes across all workspaces that share it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives_considered
+    attributes:
+      label: Alternatives Considered
+      description: Have you tried any workarounds or considered alternative approaches? Describe them here.
+      placeholder: |
+        e.g. I currently use a naming convention in note titles (e.g. "[project-x] My Note") but this is fragile and hard to maintain.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context / Mockups
+      description: |
+        Add any other context, screenshots, mockups, or links to similar features in other apps that could help illustrate your idea.
+        You can drag and drop images directly into this field.
+      placeholder: Paste links, drag and drop mockups, or add any other relevant context here...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched [existing issues](https://github.com/twobroslab/likho/issues) and this feature has not already been requested.
+          required: true
+        - label: I am willing to contribute this feature via a pull request if it is accepted.
+          required: false

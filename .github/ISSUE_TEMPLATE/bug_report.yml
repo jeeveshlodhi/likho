@@ -1,0 +1,142 @@
+name: Bug Report
+description: Report a bug to help us improve Likho
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Thank you for reporting a bug!
+        Please fill out the form below as completely as possible. The more detail you provide, the faster we can investigate and fix the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Likho is affected?
+      options:
+        - Desktop App (Tauri)
+        - Frontend (React)
+        - Backend (FastAPI)
+        - Local AI
+        - Real-time Collaboration
+        - Editor (BlockNote)
+        - Authentication
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+      placeholder: |
+        e.g. When I click "New Note", the app crashes with no error message shown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide numbered steps to reliably reproduce the bug.
+      placeholder: |
+        1. Open Likho and sign in
+        2. Navigate to the workspace '...'
+        3. Click on '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: e.g. A new blank note should open in the editor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual Behavior
+      description: A clear and concise description of what actually happened.
+      placeholder: e.g. The app freezes and then closes unexpectedly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots_logs
+    attributes:
+      label: Screenshots / Logs
+      description: |
+        If applicable, add screenshots or paste relevant log output to help explain your problem.
+        You can find Tauri app logs in:
+        - **macOS**: `~/Library/Logs/com.twobroslab.likho/`
+        - **Windows**: `%APPDATA%\com.twobroslab.likho\logs\`
+        - **Linux**: `~/.local/share/com.twobroslab.likho/logs/`
+      placeholder: Paste logs or drag and drop screenshots here...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: Operating System
+      description: What operating system are you running Likho on?
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows 10
+        - Windows 11
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: app_version
+    attributes:
+      label: App Version
+      description: What version of Likho are you running? You can find this in **Help → About Likho**.
+      placeholder: "e.g. 0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severely does this bug impact your use of Likho?
+      options:
+        - "Critical — App crashes or data loss occurs"
+        - "High — Major feature is broken or unusable"
+        - "Medium — Feature partially works but is degraded"
+        - "Low — Cosmetic issue or minor inconvenience"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context about the problem here. For example:
+        - Does this happen every time or intermittently?
+        - Did this work in a previous version?
+        - Are you using any specific workspace settings or plugins?
+      placeholder: Any other details that might help us diagnose the issue...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched [existing issues](https://github.com/twobroslab/likho/issues) and this bug has not already been reported.
+          required: true
+        - label: I am using the latest available version of Likho.
+          required: true
